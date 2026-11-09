@@ -1,0 +1,22 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DPP policy check (OPA)</title>
+<link rel="stylesheet" href="style.css">
+<main>
+<h1>DPP metadata check</h1>
+<p class="muted">An AAS file is sent to Open Policy Agent; a Rego policy checks it against IDTA 02099-1 §3.1 (mandatory attributes, types, date-time with timezone).</p>
+<p class="muted">Policy: <a href="https://gitlab.com/leowang.posedio/dpp-demo/-/blob/main/policy/dpp.rego" target="_blank" rel="noopener"><code>policy/dpp.rego</code></a>
+ · Checked against: <a href="https://industrialdigitaltwin.org/en/wp-content/uploads/sites/2/2026/05/IDTA-02099-1_Submodel-Digital-Product-Passport-Part-1.pdf" target="_blank" rel="noopener">IDTA 02099-1 v1.0 §3.1</a>, submodel <a href="https://admin-shell.io/idta/cds/dppMetadata/1" target="_blank" rel="noopener"><code>admin-shell.io/idta/cds/dppMetadata/1</code></a></p>
+<div class="row">
+  <button data-s="valid_dpp">valid</button>
+  <button data-s="invalid_dpp">invalid</button>
+  <button data-s="no_timezone_dpp">no timezone</button>
+</div>
+<textarea id="input" spellcheck="false" aria-label="AAS JSON"></textarea>
+<p><button id="check" class="primary">Check with OPA</button></p>
+<div id="verdict"></div>
+<table id="results"></table>
+<details><summary>Raw OPA response</summary><pre id="raw"></pre></details>
+</main>
+<script src="app.js"></script>
