@@ -2,6 +2,7 @@
   --bg: #fff; --fg: #1f2328; --muted: #656d76; --line: #d8dee4; --panel: #f6f8fa;
   color-scheme: light;
   --accent: #0b5cad; --pass: #1a7f37; --fail: #b42318;
+  --info-tint: #eaf2fb; --warn-tint: #fff4e5; --warn-edge: #f5c27a; --warn-ink: #8a4b00;
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg);
@@ -66,10 +67,10 @@ dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 /* How it works */
 .lead { font-size: 1.05rem; color: var(--muted); max-width: 46rem; }
 /* request flow as swimlanes: one column per party, steps placed by --c (column) and --r (row) */
-[data-who="Browser"] { --tint: #eaf2fb; --edge: #b6d0ee; --ink: var(--accent); }
+[data-who="Browser"] { --tint: var(--info-tint); --edge: #b6d0ee; --ink: var(--accent); }
 [data-who="nginx"] { --tint: var(--panel); --edge: var(--line); --ink: var(--muted); }
 [data-who="OPA"] { --tint: #e6f4ea; --edge: #a9d6b5; --ink: var(--pass); }
-[data-who="Issuer"] { --tint: #fff4e5; --edge: #f5c27a; --ink: #8a4b00; }
+[data-who="Issuer"] { --tint: var(--warn-tint); --edge: var(--warn-edge); --ink: var(--warn-ink); }
 .lanes { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); row-gap: .6rem; margin: 1rem 0 2rem;
          border: 1px solid var(--line); border-radius: 10px; padding-bottom: .8rem;
          background: linear-gradient(to right, var(--line) 1px, transparent 1px) -1px 0 / 25% 100%; }
@@ -110,8 +111,8 @@ dt { color: var(--muted); } dd { margin: 0; overflow-wrap: anywhere; }
 .tag { font: 500 11px/1 system-ui; text-transform: uppercase; letter-spacing: .04em; padding: .2rem .45rem;
        border-radius: 999px; margin-left: .4rem; vertical-align: 2px; background: var(--panel);
        border: 1px solid var(--line); color: var(--muted); }
-.tag.demo { background: #fff4e5; border-color: #f5c27a; color: #8a4b00; }
-.chip { display: inline-block; font: 12px ui-monospace, Menlo, Consolas, monospace; background: #eaf2fb;
+.tag.demo { background: var(--warn-tint); border-color: var(--warn-edge); color: var(--warn-ink); }
+.chip { display: inline-block; font: 12px ui-monospace, Menlo, Consolas, monospace; background: var(--info-tint);
         color: var(--accent); border-radius: 4px; padding: .1rem .4rem; margin: 0 .25rem .25rem 0; }
 .legend { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 1rem 0; }
 .legend div { border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; padding: .6rem .8rem; font-size: 14px; }
