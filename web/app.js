@@ -28,14 +28,43 @@ async function check() {
   $("verdict").innerHTML = r.allow
     ? '<span class="PASS">Compliant</span>'
     : `<span class="FAIL">Not compliant</span> (${r.failed} failed)`;
-  $("results").innerHTML = "<tr><th>Check</th><th>Status</th><th>Message</th></tr>" +
-    r.results.map((x) =>
-      `<tr><td>${esc(x.check)}</td><td class="${x.status}">${x.status}</td><td>${esc(x.message)}</td></tr>`
-    ).join("");
+  showResults(r.results);
   showVc(r);
 }
 
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+
+// Results, grouped like the rule groups on the "How it works" page.
+const groups = [
+  ["AAS structure", /^AAS-/],
+  ["DppMetadata submodel", /^(STRUCT-|SEM-submodel$|DUP-)/],
+  ["Presence", /^(MAND-|VAL-.*-nonempty$)/],
+  ["Types and semanticIds", /^(TYPE-|SEM-(?!item-|contentSpecificationIds$))/],
+  ["Granularity", /^VAL-granularity/],
+  ["contentSpecificationIds", /^(OPT-|SML-|SEM-)/],
+  ["lastUpdate", /^DT-/],
+  ["Technical data", /^TECH-/],
+  ["Other", /./],
+];
+const order = { FAIL: 0, SKIP: 1, PASS: 2 };
+const n = (rows, s) => rows.filter((x) => x.status === s).length;
+
+function showResults(results) {
+  const by = new Map(groups.map(([name]) => [name, []]));
+  for (const x of results) by.get(groups.find(([, re]) => re.test(x.check))[0]).push(x);
+  const count = (s, label) => `<span class="count ${n(results, s) ? s : "SKIP"}"><b>${n(results, s)}</b> ${label}</span>`  // zero counts stay grey;
+  $("results").innerHTML =
+    `<p class="counts">${count("PASS", "passed")}${count("FAIL", "failed")}${count("SKIP", "skipped")}</p>` +
+    [...by].filter(([, rows]) => rows.length).map(([name, rows]) => {
+      const fail = n(rows, "FAIL"), skip = n(rows, "SKIP");
+      rows.sort((a, b) => order[a.status] - order[b.status]);  // failures first; groups with a failure start open
+      return `<details class="grp"${fail ? " open" : ""}><summary><b>${name}</b>` +
+        `<span class="${fail ? "FAIL" : "PASS"}">${fail ? fail + " failed" : "all passed"}</span>` +
+        `<span class="muted">${rows.length} check${rows.length > 1 ? "s" : ""}${skip ? ", " + skip + " skipped" : ""}</span></summary><table>` +
+        rows.map((x) => `<tr><td class="${x.status}">${x.status}</td><td>${esc(x.message)}</td><td><code>${esc(x.check)}</code></td></tr>`).join("") +
+        "</table></details>";
+    }).join("");
+}
 
 function showVc(r) {
   $("vcbox").hidden = !r.vc;
