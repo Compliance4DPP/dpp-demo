@@ -4,9 +4,9 @@ PRETTIER = npx --yes prettier@3.3.3
 .PHONY: test fmt fmt-check
 test:
 	$(OPA) test /w/policy
-fmt:  # rewrite the policy files (opa fmt) and the web files (Prettier)
+fmt:
 	$(OPA) fmt -w /w/policy
 	$(PRETTIER) --write web
-fmt-check:  # fail and list the files that are not formatted
+fmt-check:
 	$(OPA) fmt --fail -l /w/policy
 	$(PRETTIER) --check web

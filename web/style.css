@@ -33,24 +33,57 @@ main {
 }
 nav {
   border-bottom: 1px solid var(--line);
+  background: var(--panel);
 }
 nav div {
   max-width: 1440px;
   margin: 0 auto;
-  padding: 0.75rem 1.25rem;
+  padding: 0 1.25rem;
   display: flex;
-  gap: 1.25rem;
+  align-items: stretch;
+  gap: 1.5rem;
 }
 nav a {
   color: var(--muted);
   text-decoration: none;
+  padding: 0.85rem 0 0.75rem;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
 }
 nav a[aria-current] {
   color: var(--fg);
   font-weight: 600;
+  border-bottom-color: var(--accent);
 }
 nav a:hover {
   color: var(--accent);
+}
+nav .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-right: 0.75rem;
+  color: var(--fg);
+  font-weight: 600;
+}
+nav .mark {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--bg);
+  font-size: 0.85rem;
+}
+nav .repo {
+  margin-left: auto;
+  font-size: 14px;
+}
+@media (max-width: 559px) {
+  nav .name {
+    display: none; /* the mark alone still links home */
+  }
 }
 h1 {
   font-size: 1.5rem;
@@ -277,10 +310,10 @@ dd {
   color: var(--muted);
 }
 .hint {
+  display: block;
   font-size: 15px;
   font-weight: 400;
 }
-/* wide screens: input on the left (stays in view), result on the right */
 @media (min-width: 1100px) {
   .cols {
     display: grid;
@@ -305,11 +338,12 @@ dd {
   }
 }
 
-/* How it works */
 .lead {
   font-size: 1.05rem;
   color: var(--muted);
-  max-width: 46rem;
+}
+.lead code {
+  white-space: nowrap;
 }
 /* request flow as swimlanes: one column per party, steps placed by --c (column) and --r (row) */
 [data-who="Browser"] {
@@ -433,7 +467,6 @@ dd {
   right: -1.5rem;
 }
 @media (max-width: 899px) {
-  /* narrow: plain list in step order, party shown as a tag */
   .lanes {
     display: block;
     border: 0;

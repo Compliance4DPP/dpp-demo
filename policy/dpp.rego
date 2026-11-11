@@ -8,7 +8,6 @@ import rego.v1
 
 cds := "https://admin-shell.io/idta/cds/"
 
-# idShort -> expected valueType, mandatory (cardinality 1)
 attributes := {
 	"digitalProductPassportId": {"valueType": "xs:string", "mandatory": true},
 	"uniqueProductIdentifier": {"valueType": "xs:string", "mandatory": true},
@@ -145,7 +144,6 @@ results contains result(2, sprintf("MAND-%s", [id]), status, msg) if {
 	msg := sprintf("%s attribute '%s' %s", [cond_name(a.mandatory), id, presence_text(present)])
 }
 
-# a mandatory attribute must carry a non-blank string value
 has_value(e) if {
 	is_string(e.value)
 	trim_space(e.value) != ""
@@ -291,7 +289,6 @@ make_report(rs) := {"allow": count(f) == 0, "failed": count(f), "groups": groups
 	f := [r | some r in rs; r.status == "FAIL"]
 }
 
-# profile "IDTA only" (default) and profile "IDTA + technical data"
 report := with_vc(make_report(results))
 
 # with_vc (vc.rego) adds the compliance credential when the check passes

@@ -3,10 +3,8 @@ package dpp
 
 import rego.v1
 
-# ---- compliance credential (only when the check passes) ----
 # Shape follows the Gaia-X ComplianceCredential (https://docs.gaia-x.eu/ontology/development/classes/ComplianceCredential/).
-# Signed as VC-JWT when VC_KEY (RSA private key PEM, from the gitignored .env) is set; unsigned otherwise.
-# Issuer and key id come from the environment (.env); defaults: validate.posedio.com, key 2026-v3 (PS256, expires 2027-05-08).
+# The default key 2026-v3 expires 2027-05-08.
 # ponytail: host-only did:web (no path component); extend if an issuer DID with a path is ever needed.
 env := opa.runtime().env
 

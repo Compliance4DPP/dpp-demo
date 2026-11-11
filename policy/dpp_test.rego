@@ -210,7 +210,6 @@ test_missing_supplemental_last_update if {
 	not dpp.report.allow with input as i
 }
 
-# ---- technical data ----
 tech_sm(els) := {"id": "sm-tech", "idShort": "Technical Data", "submodelElements": els}
 
 tech_ref := {"type": "ModelReference", "keys": [{"type": "Submodel", "value": "sm-tech"}]}

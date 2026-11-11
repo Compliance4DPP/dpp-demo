@@ -12,28 +12,37 @@ $("tech").onchange = () => {
 };
 
 async function check() {
+  $("vcbox").hidden = true;
+  $("results").innerHTML = "";
+  $("raw").textContent = "";
+  const fail = (title, detail) => {
+    $("verdict").innerHTML = `<span class="FAIL">${title}</span><span class="hint muted">${esc(detail)}</span>`;
+  };
+
+  if (!$("input").value.trim()) return fail("Nothing to check", "Paste an AAS file or pick a sample first.");
   let input;
   try {
     input = JSON.parse($("input").value);
   } catch (e) {
-    $("verdict").textContent = "Not valid JSON: " + e.message;
-    return;
+    return fail("Not valid JSON", e.message);
   }
 
-  // OPA Data API: POST /v1/data/<package>/<rule> with {"input": ...}; report_tech = profile with technical data
-  const res = await fetch(`/v1/data/dpp/${$("tech").checked ? "report_tech" : "report"}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input }),
-  });
-  const body = await res.json();
+  $("verdict").innerHTML = '<span class="hint muted">Checking\u2026</span>';
+  let body;
+  try {
+    const res = await fetch(`/v1/data/dpp/${$("tech").checked ? "report_tech" : "report"}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ input }),
+    });
+    body = await res.json();
+  } catch (e) {
+    return fail("Check failed", "The policy service could not be reached (" + e.message + ").");
+  }
   $("raw").textContent = JSON.stringify(body, null, 2);
 
   const r = body.result;
-  if (!r) {
-    $("verdict").textContent = "OPA returned no result";
-    return;
-  }
+  if (!r) return fail("No result", "OPA returned no result for this input.");
   $("verdict").innerHTML = r.allow
     ? '<span class="PASS">Compliant</span>'
     : `<span class="FAIL">Not compliant</span> (${r.failed} failed)`;
@@ -46,7 +55,6 @@ const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt
 const order = { FAIL: 0, SKIP: 1, PASS: 2 };
 const n = (rows, s) => rows.filter((x) => x.status === s).length;
 
-// Results by rule group; each result carries its group and r.groups gives the display order (both from the policy).
 function showResults(results, groups) {
   const by = groups.map((name) => [name, results.filter((x) => x.group === name)]);
   // zero counts stay grey
@@ -59,7 +67,7 @@ function showResults(results, groups) {
       .map(([name, rows]) => {
         const fail = n(rows, "FAIL"),
           skip = n(rows, "SKIP");
-        rows.sort((a, b) => order[a.status] - order[b.status]); // failures first; groups with a failure start open
+        rows.sort((a, b) => order[a.status] - order[b.status]);
         return (
           `<details class="grp"${fail ? " open" : ""}><summary><b>${esc(name)}</b>` +
           `<span class="${fail ? "FAIL" : "PASS"}">${fail ? fail + " failed" : "all passed"}</span>` +
@@ -115,7 +123,7 @@ $("copy").onclick = () => navigator.clipboard.writeText($("jwt").value);
 
 const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 
-// Verifies the JWT in the browser against the issuer's published DID document (did.json is proxied by nginx: no CORS there).
+// did.json comes through nginx: the issuer sends no CORS header
 $("verify").onclick = async () => {
   const out = (ok, msg) => {
     $("vcverify").innerHTML =
