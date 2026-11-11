@@ -1,7 +1,7 @@
 # dpp-demo
 
 OPA demonstrator for a Digital Product Passport (AAS) check against [IDTA 02099-1 v1.0, §3.1](https://industrialdigitaltwin.org/en/wp-content/uploads/sites/2/2026/05/IDTA-02099-1_Submodel-Digital-Product-Passport-Part-1.pdf).
-Backend: OPA (`policy/dpp.rego`). Frontend: plain HTML + JS calling OPA's Data API through nginx.
+Backend: OPA. Frontend: plain HTML + JS calling OPA's Data API through nginx.
 Optional profile "also require technical data" (`data.dpp.report_tech`, demo only, not part of IDTA 02099-1) additionally checks for a technical-data submodel; example: `samples/valid_tech_desc_dpp.json`.
 
 ```bash
@@ -9,16 +9,41 @@ docker compose up   # http://localhost:8082
 make test           # opa test
 ```
 
+## Layout
+
+| Path | Content |
+|---|---|
+| `policy/dpp.rego` | The rules, in eight numbered groups, and the report |
+| `policy/vc.rego` | The compliance credential: build, sign, error handling |
+| `policy/dpp_test.rego` | `opa test` cases for both |
+| `web/` | Check page, How it works page, one script, one stylesheet |
+| `nginx.conf` | Serves `web/` and `samples/`; proxies the two report paths to OPA and `/did.json` to the issuer |
+| `.env.example` | Template for the signing key and issuer settings |
+
+## Report
+
+`POST /v1/data/dpp/report` (or `report_tech`) with `{"input": <AAS JSON>}` returns:
+
+| Field | Content |
+|---|---|
+| `allow` | `true` when no check failed |
+| `failed` | Number of failed checks |
+| `groups` | The rule group names in display order |
+| `results` | One entry per check: `group`, `check` (id), `status` (`PASS`, `FAIL`, `SKIP`), `message` |
+| `vc`, `vc_jwt`, `vc_error` | Only when `allow` is true; see Compliance credential |
+
+The group of a check is set in the policy (the number in each `result(...)` call indexes `groups`), so the page does not guess it from the check id.
+
 ## Page
 
 - **Check** (`web/index.html`): input on the left, result on the right (one column below 1100px). The result is the verdict, the credential card, pass/fail/skip counters, and the checks grouped by rule group; groups with a failure open on their own, failures first.
-- **How it works** (`web/how.html`): request flow from loading a file to verifying the signature, the rule groups, the verdict legend and what the credential contains.
+- **How it works** (`web/how.html`): the request flow as a diagram with one column per party (Browser, nginx, OPA, Issuer) and arrows for requests and answers, what the credential contains, the rule groups and the verdict legend.
 
 ## Compliance credential
 
 When a check passes, OPA also issues a verifiable credential: a signed statement that this file passed, which others can verify against the issuer's public key without running the check again. A file with any FAIL gets none.
 
-The report (`POST /v1/data/dpp/report`) then carries:
+The report then also carries:
 
 | Field | Content |
 |---|---|
