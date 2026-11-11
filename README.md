@@ -7,6 +7,7 @@ Optional profile "also require technical data" (`data.dpp.report_tech`, demo onl
 ```bash
 docker compose up   # http://localhost:8082
 make test           # opa test
+make fmt            # opa fmt for policy/, Prettier for web/ (needs Node); CI fails on unformatted files
 ```
 
 ## Layout

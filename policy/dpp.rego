@@ -58,7 +58,7 @@ bool_status(true) := "PASS"
 
 bool_status(false) := "FAIL"
 
-sem_ok(node, expected) := true if {
+sem_ok(node, expected) if {
 	some k in node.semanticId.keys
 	k.value == expected
 } else := false
@@ -73,7 +73,7 @@ roots_ok if {
 
 results contains result(0, "AAS-roots", bool_status(roots_ok), "'assetAdministrationShells' and 'submodels' are arrays")
 
-shell_ok(s) := true if {
+shell_ok(s) if {
 	is_string(s.id)
 	s.id != ""
 	is_object(s.assetInformation)
@@ -81,7 +81,7 @@ shell_ok(s) := true if {
 
 results contains result(0, "AAS-shell", bool_status(shell_ok(s)), sprintf("shell '%v' has id and assetInformation", [object.get(s, "idShort", "?")])) if some s in shells
 
-submodel_ok(s) := true if {
+submodel_ok(s) if {
 	is_string(s.id)
 	s.id != ""
 } else := false
@@ -146,7 +146,7 @@ results contains result(2, sprintf("MAND-%s", [id]), status, msg) if {
 }
 
 # a mandatory attribute must carry a non-blank string value
-has_value(e) := true if {
+has_value(e) if {
 	is_string(e.value)
 	trim_space(e.value) != ""
 } else := false
@@ -158,7 +158,7 @@ results contains result(2, sprintf("VAL-%s-nonempty", [id]), bool_status(has_val
 }
 
 # ---- 3. type checks and semanticIds (only for present elements) ----
-type_ok(e, a) := true if {
+type_ok(e, a) if {
 	e.modelType == "Property"
 	e.valueType == a.valueType
 } else := false
@@ -180,7 +180,7 @@ supplemental := {
 	"lastUpdate": "https://admin-shell.io/aas/3/2/AdministrativeInformation/updatedAt",
 }
 
-supp_ok(e, expected) := true if {
+supp_ok(e, expected) if {
 	some r in e.supplementalSemanticIds
 	some k in r.keys
 	k.value == expected
@@ -204,7 +204,7 @@ dpp_shells contains sh if {
 	k.value == submodel.id
 }
 
-kind_ok(sh, g) := true if {
+kind_ok(sh, g) if {
 	sh.assetInformation.assetKind == asset_kind[g]
 } else := false
 
@@ -221,7 +221,7 @@ csi_items := v if {
 	is_array(v)
 } else := []
 
-csi_ok(e) := true if {
+csi_ok(e) if {
 	e.modelType == "SubmodelElementList"
 	e.typeValueListElement == "Property"
 	e.valueTypeListElement == "xs:string"
@@ -241,7 +241,7 @@ results contains result(5, "SEM-contentSpecificationIds", bool_status(sem_ok(csi
 
 results contains result(5, "SML-contentSpecificationIds-count", bool_status(count(csi_items) >= 1), sprintf("%d item(s), at least 1 required", [count(csi_items)])) if csi
 
-item_ok(it) := true if {
+item_ok(it) if {
 	it.modelType == "Property"
 	it.valueType == "xs:string"
 	is_string(it.value)
@@ -262,7 +262,7 @@ with_tz(v) := v if has_tz(v)
 with_tz(v) := concat("", [v, "Z"]) if not has_tz(v)
 
 # calendar/range validation is delegated to the RFC 3339 parser (tz appended when absent)
-well_formed(v) := true if {
+well_formed(v) if {
 	regex.match(dt_re, v)
 	time.parse_rfc3339_ns(with_tz(v))
 } else := false

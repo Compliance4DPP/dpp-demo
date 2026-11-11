@@ -1,45 +1,79 @@
 <!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>DPP policy check (OPA)</title>
-<link rel="stylesheet" href="style.css">
-<nav><div><a href="./" aria-current="page">Check</a><a href="how.html">How it works</a></div></nav>
+<link rel="stylesheet" href="style.css" />
+<nav>
+  <div><a href="./" aria-current="page">Check</a><a href="how.html">How it works</a></div>
+</nav>
 <main>
-<h1>DPP metadata check</h1>
-<p class="muted">An AAS file is sent to Open Policy Agent; a Rego policy checks it against IDTA 02099-1 §3.1 (mandatory attributes, types, date-time with timezone).</p>
-<p class="muted">Policy: <a href="https://gitlab.com/leowang.posedio/dpp-demo/-/blob/main/policy/dpp.rego" target="_blank" rel="noopener"><code>policy/dpp.rego</code></a>
- · Checked against: <a href="https://industrialdigitaltwin.org/en/wp-content/uploads/sites/2/2026/05/IDTA-02099-1_Submodel-Digital-Product-Passport-Part-1.pdf" target="_blank" rel="noopener">IDTA 02099-1 v1.0 §3.1</a>, submodel <a href="https://admin-shell.io/idta/cds/dppMetadata/1" target="_blank" rel="noopener"><code>admin-shell.io/idta/cds/dppMetadata/1</code></a></p>
-<div class="cols">
-<section>
-<div class="row">
-  <button data-s="valid_dpp">valid</button>
-  <button data-s="invalid_dpp">invalid</button>
-  <button data-s="no_timezone_dpp">no timezone</button>
-  <button data-s="valid_tech_desc_dpp">with technical data</button>
-</div>
-<textarea id="input" spellcheck="false" aria-label="AAS JSON"></textarea>
-<p><button id="check" class="primary">Check with OPA</button>
-  <label><input type="checkbox" id="tech"> also require technical data</label></p>
-</section>
-<section>
-<div id="verdict"><span class="muted hint">Pick a sample or paste an AAS file, then check. The result appears here.</span></div>
-<section id="vcbox" hidden>
-<h2><span id="vctitle"></span><span id="vcissuer"></span></h2>
-<p class="muted">Because the check passed, the service issued a verifiable credential: a signed statement that this DPP passed the check. Anyone can verify it against the issuer's public key, without running the check again.</p>
-<dl id="vcinfo"></dl>
-<div class="row">
-  <button id="verify" class="primary">Verify signature</button>
-  <button id="copy">Copy JWT</button>
-  <a href="https://vc-jwt.io/playground?tab=decoder" target="_blank" rel="noopener">Open decoder</a>
-</div>
-<p id="vcverify" role="status"></p>
-<label class="muted" for="jwt">Signed credential (JWT). Change any character and verify again to see it fail.</label>
-<textarea id="jwt" spellcheck="false"></textarea>
-<details><summary>Decoded credential</summary><pre id="vc"></pre></details>
-</section>
-<div id="results"></div>
-<details><summary>Raw OPA response</summary><pre id="raw"></pre></details>
-</section>
-</div>
+  <h1>DPP metadata check</h1>
+  <p class="muted">
+    An AAS file is sent to Open Policy Agent; a Rego policy checks it against IDTA 02099-1 §3.1 (mandatory attributes,
+    types, date-time with timezone).
+  </p>
+  <p class="muted">
+    Policy:
+    <a href="https://gitlab.com/leowang.posedio/dpp-demo/-/blob/main/policy/dpp.rego" target="_blank" rel="noopener"
+      ><code>policy/dpp.rego</code></a
+    >
+    · Checked against:
+    <a
+      href="https://industrialdigitaltwin.org/en/wp-content/uploads/sites/2/2026/05/IDTA-02099-1_Submodel-Digital-Product-Passport-Part-1.pdf"
+      target="_blank"
+      rel="noopener"
+      >IDTA 02099-1 v1.0 §3.1</a
+    >, submodel
+    <a href="https://admin-shell.io/idta/cds/dppMetadata/1" target="_blank" rel="noopener"
+      ><code>admin-shell.io/idta/cds/dppMetadata/1</code></a
+    >
+  </p>
+  <div class="cols">
+    <section>
+      <div class="row">
+        <button data-s="valid_dpp">valid</button>
+        <button data-s="invalid_dpp">invalid</button>
+        <button data-s="no_timezone_dpp">no timezone</button>
+        <button data-s="valid_tech_desc_dpp">with technical data</button>
+      </div>
+      <textarea id="input" spellcheck="false" aria-label="AAS JSON"></textarea>
+      <p>
+        <button id="check" class="primary">Check with OPA</button>
+        <label><input type="checkbox" id="tech" /> also require technical data</label>
+      </p>
+    </section>
+    <section>
+      <div id="verdict">
+        <span class="muted hint">Pick a sample or paste an AAS file, then check. The result appears here.</span>
+      </div>
+      <section id="vcbox" hidden>
+        <h2><span id="vctitle"></span><span id="vcissuer"></span></h2>
+        <p class="muted">
+          Because the check passed, the service issued a verifiable credential: a signed statement that this DPP passed
+          the check. Anyone can verify it against the issuer's public key, without running the check again.
+        </p>
+        <dl id="vcinfo"></dl>
+        <div class="row">
+          <button id="verify" class="primary">Verify signature</button>
+          <button id="copy">Copy JWT</button>
+          <a href="https://vc-jwt.io/playground?tab=decoder" target="_blank" rel="noopener">Open decoder</a>
+        </div>
+        <p id="vcverify" role="status"></p>
+        <label class="muted" for="jwt"
+          >Signed credential (JWT). Change any character and verify again to see it fail.</label
+        >
+        <textarea id="jwt" spellcheck="false"></textarea>
+        <details>
+          <summary>Decoded credential</summary>
+          <pre id="vc"></pre>
+        </details>
+      </section>
+      <div id="results"></div>
+      <details>
+        <summary>Raw OPA response</summary>
+        <pre id="raw"></pre>
+      </details>
+    </section>
+  </div>
 </main>
 <script src="app.js"></script>
