@@ -65,7 +65,9 @@ const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")
 
 // Verifies the JWT in the browser against the issuer's published DID document (did.json is proxied by nginx: no CORS there).
 $("verify").onclick = async () => {
-  const out = (ok, msg) => { $("vcverify").innerHTML = `<span class="${ok ? "PASS" : "FAIL"}">${ok ? "Signature valid" : "Not valid"}</span>: ${esc(msg)}`; };
+  const out = (ok, msg) => { $("vcverify").innerHTML = `<span class="${ok ? "PASS" : "FAIL"}">${ok ? "Signature valid" : "Not valid"}</span>: ${esc(msg)} <span class="muted">(checked ${new Date().toLocaleTimeString()})</span>`; };
+  $("vcverify").textContent = "Checking\u2026";
+  await new Promise((r) => setTimeout(r, 300));  // long enough to see that a click re-checks
   try {
     const [h, p, sig] = $("jwt").value.trim().split(".");
     const { kid } = JSON.parse(new TextDecoder().decode(b64u(h)));
