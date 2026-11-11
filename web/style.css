@@ -32,3 +32,39 @@ th { color: var(--muted); font-weight: 500; font-size: 13px; }
 details { margin-top: 1rem; } summary { cursor: pointer; color: var(--muted); }
 pre { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: .6rem;
       overflow: auto; max-height: 16rem; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+.SKIP { color: var(--muted); }
+td { overflow-wrap: anywhere; }
+h2 { font-size: 1.15rem; font-weight: 600; margin: 2rem 0 .25rem; }
+
+/* How it works */
+.lead { font-size: 1.05rem; color: var(--muted); max-width: 46rem; }
+.steps { list-style: none; padding: 0; margin: 1rem 0; display: grid; gap: .75rem;
+         grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); counter-reset: s; }
+.steps li { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+            padding: 2.4rem .8rem .8rem; font-size: 14px; counter-increment: s; }
+.steps li::before { content: counter(s); position: absolute; top: .7rem; left: .8rem; width: 1.5rem; height: 1.5rem;
+                    border-radius: 50%; background: var(--accent); color: var(--bg); font: 600 13px/1.5rem system-ui;
+                    text-align: center; }
+.steps b { display: block; margin-bottom: .15rem; }
+.steps small { color: var(--muted); }
+.groups { list-style: none; padding: 0; margin: 1rem 0; border-left: 2px solid var(--line); }
+.groups li { position: relative; padding: 0 0 1.25rem 1.5rem; }
+.groups li::before { content: attr(data-n); position: absolute; left: -.85rem; top: 0; width: 1.6rem; height: 1.6rem;
+                     border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); color: var(--accent);
+                     font: 600 12px/1.35rem system-ui; text-align: center; }
+.groups li.extra::before { border-color: var(--muted); color: var(--muted); border-style: dashed; }
+.groups h3 { font-size: 1rem; font-weight: 600; margin: 0 0 .2rem; line-height: 1.6rem; }
+.groups p { margin: 0 0 .4rem; font-size: 14px; }
+.tag { font: 500 11px/1 system-ui; text-transform: uppercase; letter-spacing: .04em; padding: .2rem .45rem;
+       border-radius: 999px; margin-left: .4rem; vertical-align: 2px; background: var(--panel);
+       border: 1px solid var(--line); color: var(--muted); }
+.tag.demo { background: #fff4e5; border-color: #f5c27a; color: #8a4b00; }
+.chip { display: inline-block; font: 12px ui-monospace, Menlo, Consolas, monospace; background: #eaf2fb;
+        color: var(--accent); border-radius: 4px; padding: .1rem .4rem; margin: 0 .25rem .25rem 0; }
+.legend { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin: 1rem 0; }
+.legend div { border: 1px solid var(--line); border-left-width: 4px; border-radius: 8px; padding: .6rem .8rem; font-size: 14px; }
+.legend b { display: block; font-size: 13px; letter-spacing: .04em; }
+.legend .PASS { border-left-color: var(--pass); } .legend .FAIL { border-left-color: var(--fail); font-weight: 400; }
+.legend .SKIP { border-left-color: var(--muted); }
+.legend div span { color: var(--fg); }
+.steps code { overflow-wrap: anywhere; font-size: 12px; }

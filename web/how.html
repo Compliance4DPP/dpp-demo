@@ -1,0 +1,57 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How it works · DPP policy check (OPA)</title>
+<link rel="stylesheet" href="style.css">
+<nav><div><a href="./">Check</a><a href="how.html" aria-current="page">How it works</a></div></nav>
+<main>
+<h1>How the check works</h1>
+<p class="lead">The browser only sends the file and shows the answer. Every rule lives in <code>policy/dpp.rego</code> and runs inside Open Policy Agent.</p>
+
+<h2>Request flow</h2>
+<ol class="steps">
+  <li><b>Load a file</b><small>Paste AAS JSON or pick a sample</small></li>
+  <li><b>Parse</b><small>The browser checks it is valid JSON</small></li>
+  <li><b>Send to OPA</b><small><code>POST /v1/data/dpp/report</code>, or <code>report_tech</code> with "also require technical data"</small></li>
+  <li><b>nginx</b><small>Forwards only these two paths to OPA</small></li>
+  <li><b>Evaluate</b><small>OPA runs every rule group below</small></li>
+  <li><b>Show result</b><small>Verdict and one row per check</small></li>
+</ol>
+
+<h2>Rule groups</h2>
+<p class="muted">All groups run on every request, and one failing rule does not stop the others. Rules about an attribute only run when that attribute is present.</p>
+<ol class="groups">
+  <li data-n="0"><h3>AAS structure</h3>
+    <p>The root collections are arrays, every shell has an id and assetInformation, every submodel has an id, all submodel references resolve, and a shell references DppMetadata.</p>
+    <span class="chip">AAS-*</span></li>
+  <li data-n="1"><h3>DppMetadata submodel</h3>
+    <p>Exactly one submodel with idShort <code>DppMetadata</code>, semanticId <code>…/cds/dppMetadata/1</code>, and no duplicate idShorts inside it.</p>
+    <span class="chip">STRUCT-submodel</span><span class="chip">SEM-submodel</span><span class="chip">DUP-*</span></li>
+  <li data-n="2"><h3>Presence</h3>
+    <p>The 7 mandatory attributes are present with a non-blank value. <code>facilityId</code> is optional.</p>
+    <span class="chip">MAND-*</span><span class="chip">VAL-*-nonempty</span></li>
+  <li data-n="3"><h3>Types and semanticIds</h3>
+    <p>Each attribute is a <code>Property</code> with the expected valueType and semanticId <code>…/cds/&lt;name&gt;/1</code>. <code>granularity</code> and <code>lastUpdate</code> also need their supplementalSemanticIds.</p>
+    <span class="chip">TYPE-*</span><span class="chip">SEM-*</span></li>
+  <li data-n="4"><h3>Granularity</h3>
+    <p>The value is <code>Model</code>, <code>Item</code> or <code>Batch</code> and matches the shell's assetKind (Model → Type, Item → Instance, Batch → Batch).</p>
+    <span class="chip">VAL-granularity*</span></li>
+  <li data-n="5"><h3>contentSpecificationIds<span class="tag">optional</span></h3>
+    <p>If present: a list of <code>xs:string</code> Properties, not order-relevant, with at least one non-empty item and correct semanticIds.</p>
+    <span class="chip">OPT-*</span><span class="chip">SML-*</span><span class="chip">SEM-item-*</span></li>
+  <li data-n="6"><h3>lastUpdate</h3>
+    <p>A well-formed date-time with a timezone, and that timezone is UTC (<code>Z</code> or <code>+00:00</code>).</p>
+    <span class="chip">DT-lastUpdate-*</span></li>
+  <li data-n="7" class="extra"><h3>Technical data<span class="tag demo">demo only</span></h3>
+    <p>Only runs with "also require technical data"; not part of IDTA 02099-1. Needs a submodel whose idShort contains "technical", with at least 3 elements that carry a value, referenced by a shell.</p>
+    <span class="chip">TECH-*</span></li>
+</ol>
+
+<h2>Verdict</h2>
+<div class="legend">
+  <div class="PASS"><b>PASS</b><span>Rule satisfied.</span></div>
+  <div class="FAIL"><b>FAIL</b><span>Rule violated. Any FAIL makes the file <strong>Not compliant</strong>.</span></div>
+  <div class="SKIP"><b>SKIP</b><span>Optional attribute missing. Does not affect the verdict.</span></div>
+</div>
+<p class="muted">"Compliant" is OPA's <code>allow</code> field: <code>true</code> when no rule returned FAIL.</p>
+</main>
