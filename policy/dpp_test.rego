@@ -88,6 +88,13 @@ test_no_vc_when_invalid if {
 	not r.vc
 }
 
+test_every_result_has_a_group if {
+	r := dpp.report_tech with input as base
+	every x in r.results {
+		x.group in r.groups
+	}
+}
+
 test_missing_mandatory if {
 	i := json.remove(base, ["submodels/0/submodelElements/4"])
 	not dpp.report.allow with input as i
