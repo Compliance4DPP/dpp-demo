@@ -275,10 +275,102 @@ results contains result("DT-lastUpdate-utc", bool_status(regex.match(`(Z|[+-]00:
 }
 
 # ---- report ----
-fails := [r | some r in results; r.status == "FAIL"]
-
-report := {
-	"allow": count(fails) == 0,
-	"failed": count(fails),
-	"results": sort(results),
+make_report(rs) := {"allow": count(f) == 0, "failed": count(f), "results": sort(rs)} if {
+	f := [r | some r in rs; r.status == "FAIL"]
 }
+
+# profile "IDTA only" (default) and profile "IDTA + technical data"
+report := make_report(results)
+
+report_tech := make_report(results | tech_results)
+
+# ---- 7. technical data (demo only, not part of IDTA 02099-1) ----
+# Port of check_technical_data in gaiax_demonstrator: a submodel whose idShort contains "technical"
+# (case, spaces, _ and - ignored) with >= 3 elements that carry a value, referenced by an AAS.
+# Only evaluated in report_tech; a missing technical submodel fails there, as in the Python checker.
+tech_min_elements := 3
+
+norm_name(s) := regex.replace(lower(s), `[^a-z0-9]`, "")
+
+tech_candidates := [s |
+	some s in all_submodels
+	s.id != object.get(submodel, "id", null)
+	is_string(s.idShort)
+	contains(norm_name(s.idShort), "technical")
+]
+
+# element nodes sit at paths [i] / [i, "value", j] / ...; collections and lists are not counted themselves
+tech_element(path) if {
+	count(path) % 2 == 1
+	every i, p in path {
+		path_step_ok(i, p)
+	}
+}
+
+path_step_ok(i, _) if i % 2 == 0
+
+path_step_ok(i, "value") if i % 2 == 1
+
+leaf_has_value(e) if {
+	e.modelType == "MultiLanguageProperty"
+	some t in e.value
+	trim_space(t.text) != ""
+}
+
+leaf_has_value(e) if {
+	e.modelType == "Range"
+	some k in ["min", "max"]
+	not object.get(e, k, "") in {"", null}
+}
+
+leaf_has_value(e) if {
+	not e.modelType in {"MultiLanguageProperty", "Range"}
+	v := e.value
+	v != null
+	not v in {[], {}}
+	not blank(v)
+}
+
+blank(v) if {
+	is_string(v)
+	trim_space(v) == ""
+}
+
+tech_counts[i] := [count(w), count(wo)] if {
+	some i, s in tech_candidates
+	leaves := [n |
+		walk(object.get(s, "submodelElements", []), [path, n])
+		tech_element(path)
+		is_object(n)
+		not n.modelType in {"SubmodelElementCollection", "SubmodelElementList"}
+	]
+	w := [n | some n in leaves; leaf_has_value(n)]
+	wo := [n | some n in leaves; not leaf_has_value(n)]
+}
+
+# best match: most elements with a value, first of equals
+tech_best := i if {
+	top := max({c[0] | some c in tech_counts})
+	i := min({j | some j, c in tech_counts; c[0] == top})
+}
+
+tech := tech_candidates[tech_best]
+
+tech_results contains result("TECH-submodel", "FAIL", "no submodel with 'technical' in its idShort") if {
+	submodel
+	count(tech_candidates) == 0
+}
+
+tech_results contains result("TECH-submodel", "PASS", sprintf("technical-data submodel '%s' found (%d candidate(s))", [tech.idShort, count(tech_candidates)])) if tech
+
+tech_results contains result("TECH-elements", bool_status(is_array(tech.submodelElements)), "submodelElements is missing or not an array") if {
+	tech
+	not is_array(tech.submodelElements)
+}
+
+tech_results contains result("TECH-elements", bool_status(c[0] >= tech_min_elements), sprintf("%d element(s) with a value, %d without; at least %d required", [c[0], c[1], tech_min_elements])) if {
+	is_array(tech.submodelElements)
+	c := tech_counts[tech_best]
+}
+
+tech_results contains result("TECH-ref", bool_status(tech.id in refs), sprintf("'%s' is referenced by an AAS", [tech.idShort])) if tech

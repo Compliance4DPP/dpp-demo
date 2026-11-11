@@ -12,9 +12,11 @@
   <button data-s="valid_dpp">valid</button>
   <button data-s="invalid_dpp">invalid</button>
   <button data-s="no_timezone_dpp">no timezone</button>
+  <button data-s="valid_tech_desc_dpp">with technical data</button>
 </div>
 <textarea id="input" spellcheck="false" aria-label="AAS JSON"></textarea>
-<p><button id="check" class="primary">Check with OPA</button></p>
+<p><button id="check" class="primary">Check with OPA</button>
+  <label><input type="checkbox" id="tech"> also require technical data</label></p>
 <div id="verdict"></div>
 <table id="results"></table>
 <details><summary>Raw OPA response</summary><pre id="raw"></pre></details>

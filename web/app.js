@@ -7,14 +7,15 @@ document.querySelectorAll("button[data-s]").forEach((b) => {
   };
 });
 $("check").onclick = check;
+$("tech").onchange = () => { if ($("input").value.trim()) check(); };
 
 async function check() {
   let input;
   try { input = JSON.parse($("input").value); }
   catch (e) { $("verdict").textContent = "Not valid JSON: " + e.message; return; }
 
-  // OPA Data API: POST /v1/data/<package>/<rule> with {"input": ...}
-  const res = await fetch("/v1/data/dpp/report", {
+  // OPA Data API: POST /v1/data/<package>/<rule> with {"input": ...}; report_tech = profile with technical data
+  const res = await fetch(`/v1/data/dpp/${$("tech").checked ? "report_tech" : "report"}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ input }),

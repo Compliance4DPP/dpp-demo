@@ -164,3 +164,63 @@ test_missing_supplemental_last_update if {
 	i := json.remove(base, ["submodels/0/submodelElements/5/supplementalSemanticIds"])
 	not dpp.report.allow with input as i
 }
+
+# ---- technical data ----
+tech_sm(els) := {"id": "sm-tech", "idShort": "Technical Data", "submodelElements": els}
+
+tech_ref := {"type": "ModelReference", "keys": [{"type": "Submodel", "value": "sm-tech"}]}
+
+with_tech(els, referenced) := json.patch(base, array.concat(
+	[{"op": "add", "path": "/submodels/-", "value": tech_sm(els)}],
+	[{"op": "add", "path": "/assetAdministrationShells/0/submodels/-", "value": tech_ref} | referenced],
+))
+
+plain(id, v) := {"idShort": id, "modelType": "Property", "valueType": "xs:string", "value": v}
+
+status(check) := {r.status | some r in dpp.report_tech.results; r.check == check}
+
+# one plain, one nested in a collection, one MultiLanguageProperty, one Range, one blank (not counted)
+tech_els := [
+	plain("manufacturer", "VOLCO"),
+	{"idShort": "Geometry", "modelType": "SubmodelElementCollection", "value": [plain("diameter", "10")]},
+	{"idShort": "name", "modelType": "MultiLanguageProperty", "value": [{"language": "en", "text": "End mill"}]},
+	{"idShort": "rpm", "modelType": "Range", "valueType": "xs:int", "min": "1000"},
+	plain("coating", "  "),
+]
+
+test_tech_absent_fails_only_in_tech_profile if {
+	status("TECH-submodel") == {"FAIL"} with input as base
+	not dpp.report_tech.allow with input as base
+	dpp.report.allow with input as base
+}
+
+test_default_profile_ignores_tech if {
+	i := with_tech([plain("a", "1")], false)
+	dpp.report.allow with input as i
+	not "TECH-ref" in {r.check | some r in dpp.report.results} with input as i
+}
+
+test_tech_valid if {
+	i := with_tech(tech_els, true)
+	dpp.report_tech.allow with input as i
+	status("TECH-elements") == {"PASS"} with input as i
+	r := [x | some x in dpp.report_tech.results; x.check == "TECH-elements"] with input as i
+	contains(r[0].message, "4 element(s) with a value, 1 without")
+}
+
+test_tech_too_few_elements if {
+	i := with_tech([plain("a", "1"), plain("b", "")], true)
+	status("TECH-elements") == {"FAIL"} with input as i
+	not dpp.report_tech.allow with input as i
+}
+
+test_tech_not_referenced if {
+	i := with_tech(tech_els, false)
+	status("TECH-ref") == {"FAIL"} with input as i
+	not dpp.report_tech.allow with input as i
+}
+
+test_tech_elements_not_array if {
+	i := with_tech("oops", true)
+	status("TECH-elements") == {"FAIL"} with input as i
+}
