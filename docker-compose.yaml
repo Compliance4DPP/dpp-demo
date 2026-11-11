@@ -3,8 +3,11 @@ services:
     image: openpolicyagent/opa:1.22.0
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policy"]
     volumes: ["./policy:/policy:ro"]
+    env_file: [{path: .env, required: false}]  # VC_KEY, VC_DID_HOST, VC_KEY_ID; see .env.example
   web:
     image: nginx:1.31.8-alpine
     ports: ["127.0.0.1:8082:80"]
-    volumes: ["./web:/usr/share/nginx/html:ro", "./samples:/samples:ro", "./nginx.conf:/etc/nginx/conf.d/default.conf:ro"]
+    volumes: ["./web:/usr/share/nginx/html:ro", "./samples:/samples:ro", "./nginx.conf:/etc/nginx/templates/default.conf.template:ro"]
+    environment:  # only the host, never the whole .env: the private key stays out of this container
+      VC_DID_HOST: ${VC_DID_HOST:-validate.posedio.com}
     depends_on: [opa]

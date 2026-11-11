@@ -50,6 +50,44 @@ with_update(v) := json.patch(base, [{"op": "replace", "path": "/submodels/0/subm
 
 test_valid if dpp.report.allow with input as base
 
+test_vc_issued_when_valid if {
+	vc := dpp.report.vc with input as base with time.now_ns as 0
+	vc.validFrom == "1970-01-01T00:00:00Z"
+	vc.validUntil == "1970-04-01T00:00:00Z"
+	vc.credentialSubject.id == concat("", [vc.id, "#cs"])
+	vc.credentialSubject["gx:compliantCredentials"][0].id == "sm-dpp"
+	"STRUCT-submodel" in vc.credentialSubject["gx:validatedCriteria"]
+}
+
+# throwaway RSA key, generated for this test only
+throwaway_key := "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRREMrRVJZYVpUcStMYmQKdTRqOGl5TUY3RnhOclR4aHdLa1RCVGxNK05hTm1Ed3o4bGFnYXlIM3cwaHlPV2VMcjVlOThhcmMvby9ZMnBGZwpRQUg2MDRyZ3ZDZTlkZ3kyQTRuaWVCYks5cUdOSDk1V2krL1RueUxndFFLaFVqeXA4bTIxeDQ3WjkrRTlycXBCCmtEV3VxSDZwd2tDV3ZNSGN5VFYyaEptSkFReDZNUi9tR1F3eWZJZG5DY2tpUzR4YmEwNWh0WEpZMmR1V3pRZ2oKR0prM1hjbWVvS29ZRnhYUEVNa3ZRbm1vWkpFZTRYeHlBUFZER09vZDJnRFlIY0Q4VG5rVVZLblhtNzkxQTArMgpqTmMrRlN4NXJvVXJSVWMzZkN4UWtkd3UxQW44c3BsWSttV3AwVnlTU0xTOFFTZHp0dlE3eEZBMldHaS92MzZICjFBUlgrdmwvQWdNQkFBRUNnZ0VBS0E4dHI4TEZ5NytkaHhLRXMycjlIN2J3UWkrQmRBNUxUdktvVXRYZjg0amYKZWNibG9LRlNnZDg0Yit1MmlEOWtYSzBlYjdqSUlvVEtFTzRsMmYwRUVHZm9mR2VZZGY5bEljaU4ybGJ4VzVjOApMaWtqZGlaQTJzMm1SRElxNzdvMWEzK2NyTkZmRUxibUdZR0JYaWtWbVZpbHY3TDUzQnpsWkx3YTljam00T1lDCkMrVmJBa0p5aUJqVE9RWGw4a3E4dUhQNUZ3b3pXWW1iOFJZalZaUzc4S1lRUDNxcUZoL1cxZG43czJKdnpFb3gKdTYwei9mM21hUCtrWndaQUl3VDM0cm5VSW5JVUNRY21vU2FFNnFZVDc3TDhRSm1tZENUUXNINEo2ZGo3bkxkeQovSkNKOWNEYXVZbmMxVlIxdktvTUFSWTA4Q29VbnZkREU2bXUwbVdWNVFLQmdRRHQrQXdnM3Zsa081ODFtM1JGClJYRHhQTVRZaEpQNGQyS1VNWnRXZmJSZE51UWs3QUdkMnFjVEdsU2JuOC9hcklVdDN2TW5SOUFLODVvaWFuOFgKbldLc0dqcjlNSTJoeGd5eEpGRHUvTVZBeUdWZ3pZdlZoYVFmd1FEbERrcGUwOXpmeVNnQm5UNFZFRHUxUVJWNQpWckxRQldtckVaRkYyRDRvMUIzOEVHL2xuUUtCZ1FEUnZpY1psckM5bEo2VGg1U0FET01Rb1BMUW5zZEttUm1iClVBRHlGV2FXaEoxbzVyWmZIc00zNkhJU2wrems3MlpRNmxGeHluY05lcVg0NWd1bTJMeFB5RDk0MTBPdWJRU3MKNjFHOW9NZGVYV3J5RE9oOHR6OWp0cUZ6UEpUdkJ1WG95VVkxYldCS2NCVk1pQUhoeU15VHRtY0FpMHdiY1ArNwpkQWJsODkyZXl3S0JnUUNwU1pKbk4vZzJnK3VvMlNRSHUzU3pTTVhJT2RpQ0kzdnZiTExTL3EzMnVmdm5BRFhPCk5DUXpCTUkzeTZLMEw1SzJwU3BaUVU4UTIyZEZJSG0xTlBOaTkyNExmQ1RsZHR6RWo4ODdsSHBHc2NqYzZweVYKazNMRVhDcmt5QnZFQmZmVkEyY0Fidm9oUmVFVCttN3FXUER2NTBuYXRxNmYvMHVKQkEwb3FoRFFTUUtCZ0dMegp5akNaVm1McXBmSEdTam9yV2tqekZmdDBuV05GWGI1WGZVcTQ3QUJoS241ZU1uWW41a1FQSnhvOGtPZmxSaWt3Cmt5SVRPaDJpMm9EVnozTjAxMHJ3bDNsa1hhc0NCZTJxeTVLaU1zMERWN3hBZU1LMkZYTHVxN2JaUXc2Tis1UGEKdVlQbFNVTjFJNmRLbDFDMVVrYnlEQ0JHbDY1dW5rZ0swbUpVcmg4SEFvR0FVbEVSWnIreTJZc3lLbTJpV0NNMwoxbVNuVkFRc01wb0NSaW05M01vaTgyYnpVWU9TcGVhR1I2NFZQUlFjTGdYQXZBMjZlYUZKdWZCU05XQmwvUWNwCktCVWx3a0N1STIxdi9aV2o2K2dFcy9ZS3ZpVnpzbmhRMitvNmlQZkVkQjhZZXRqTmoxRWZpZ2pxZmFheXlEcFAKVmxaNStxNnpuOXhZWENoRjI4bVFITkU9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K"
+
+test_vc_signed_when_key_set if {
+	r := dpp.report with input as base with dpp.vc_key as throwaway_key
+	k := crypto.x509.parse_rsa_private_key(throwaway_key)
+	io.jwt.verify_ps256(r.vc_jwt, json.marshal({"keys": [{"kty": "RSA", "n": k.n, "e": k.e}]}))
+	[h, p, _] := io.jwt.decode(r.vc_jwt)
+	h.kid == "did:web:validate.posedio.com#2026-v3"
+	p == r.vc
+}
+
+test_bad_key_reported if {
+	r := dpp.report with input as base with dpp.vc_key as "not a key"
+	r.allow
+	r.vc_error
+	not r.vc_jwt
+}
+
+test_unsigned_without_key if {
+	r := dpp.report with input as base
+	not r.vc_jwt
+}
+
+test_no_vc_when_invalid if {
+	r := dpp.report with input as with_update("2026-10-21T15:53:00")
+	not r.vc
+}
+
 test_missing_mandatory if {
 	i := json.remove(base, ["submodels/0/submodelElements/4"])
 	not dpp.report.allow with input as i

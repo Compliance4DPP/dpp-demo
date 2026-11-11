@@ -19,6 +19,20 @@
 <p><button id="check" class="primary">Check with OPA</button>
   <label><input type="checkbox" id="tech"> also require technical data</label></p>
 <div id="verdict"></div>
+<section id="vcbox" hidden>
+<h2><span id="vctitle"></span><span id="vcissuer"></span></h2>
+<p class="muted">Because the check passed, the service issued a verifiable credential: a signed statement that this DPP passed the check. Anyone can verify it against the issuer's public key, without running the check again.</p>
+<dl id="vcinfo"></dl>
+<div class="row">
+  <button id="verify" class="primary">Verify signature</button>
+  <button id="copy">Copy JWT</button>
+  <a href="https://vc-jwt.io/playground?tab=decoder" target="_blank" rel="noopener">Open decoder</a>
+</div>
+<p id="vcverify" role="status"></p>
+<label class="muted" for="jwt">Signed credential (JWT). Change any character and verify again to see it fail.</label>
+<textarea id="jwt" spellcheck="false"></textarea>
+<details><summary>Decoded credential</summary><pre id="vc"></pre></details>
+</section>
 <table id="results"></table>
 <details><summary>Raw OPA response</summary><pre id="raw"></pre></details>
 </main>
