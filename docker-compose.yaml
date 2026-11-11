@@ -11,3 +11,37 @@ services:
     environment:  # only the host, never the whole .env: the private key stays out of this container
       VC_DID_HOST: ${VC_DID_HOST:-validate.posedio.com}
     depends_on: [opa]
+  # Publishing stack: docker compose --profile publish up (see publish/README.md)
+  dataswitch:
+    profiles: [publish]
+    build:
+      context: ./publish
+    ports: ["127.0.0.1:50051:50051"]
+    env_file: [{path: ./publish/.env, required: false}]
+    environment:
+      SIGNER_ADDR: signer:50050
+      GATEWAY_ADDR: gateway:5002
+      DPP_DIR: /data/dpps
+      TEMPLATE_DIR: /data/templates
+    volumes: ["./samples:/data/dpps:ro", "./publish/templates:/data/templates:ro"]
+    depends_on: [signer, gateway]
+  signer:
+    profiles: [publish]
+    image: registry.dumss.net/theia/gaia-x-signer:v0.3.2
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    volumes:
+      - ./publish/signer/config.yaml:/usr/server/config.yaml:ro
+      - ./publish/signer/key.pem:/usr/server/key.pem:ro
+  gateway:
+    profiles: [publish]
+    image: ghcr.io/ptw-tud/ecosystems-gateway:dev-nautilus_v2
+    env_file: [{path: ./publish/gateway.env, required: false}]
+    environment:
+      REDIS_ADDRESS: redis:6379
+      GRPC_BIND: 0.0.0.0:5002
+    depends_on: [redis]
+  redis:
+    profiles: [publish]
+    image: redis:7.4-alpine

@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "type": "dataset",
+    "name": {{json (printf "DPP %s" (prop .DPP "ManufacturerProductDesignation" | default .ID))}},
+    "description": {{json (printf "Digital Product Passport (AAS, IDTA 02099-1) of %s" .ID)}},
+    "author": {{json (env "TEMPLATE_AUTHOR" | default "DPP demo")}},
+    {{- with env "TEMPLATE_PROVIDED_BY"}}
+    "providedBy": {{json .}},
+    {{- end}}
+    "license": "CC-BY-4.0",
+    "tags": ["dpp", "aas", "idta-02099"],
+    "language": "en"
+  },
+  "additionalInformation": {
+    "termsAndConditions": true,
+    "gaiaX": {"serviceOfferingCredential": "https://example.org/.well-known/gx_digitalserviceoffering.jwt"}
+  },
+  "services": [
+    {
+      "name": "DPP download",
+      "type": "access",
+      "pricing": {"pricingType": "FREE"},
+      "files": [{"url": "https://example.org/dpp/endmill-0001.json", "method": "GET"}]
+    }
+  ]
+}

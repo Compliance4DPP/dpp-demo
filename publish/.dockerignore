@@ -1,0 +1,7 @@
+*
+!go.mod
+!go.sum
+!*.go
+!gen/
+!templates/
+*_test.go
