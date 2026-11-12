@@ -11,11 +11,15 @@ $("tech").onchange = () => {
   if ($("input").value.trim()) check();
 };
 
+let runs = 0;
+
 async function check() {
+  const run = ++runs;
   $("vcbox").hidden = true;
   $("results").innerHTML = "";
   $("raw").textContent = "";
   const fail = (title, detail) => {
+    if (run !== runs) return;
     $("verdict").innerHTML = `<span class="FAIL">${title}</span><span class="hint muted">${esc(detail)}</span>`;
   };
 
@@ -35,10 +39,12 @@ async function check() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ input }),
     });
+    if (!res.ok) return fail("Check failed", "The policy service answered HTTP " + res.status + ".");
     body = await res.json();
   } catch (e) {
     return fail("Check failed", "The policy service could not be reached (" + e.message + ").");
   }
+  if (run !== runs) return;
   $("raw").textContent = JSON.stringify(body, null, 2);
 
   const r = body.result;
@@ -134,10 +140,13 @@ $("verify").onclick = async () => {
   try {
     const [h, p, sig] = $("jwt").value.trim().split(".");
     const { kid } = JSON.parse(new TextDecoder().decode(b64u(h)));
-    const doc = await (await fetch("did.json")).json();
+    const res = await fetch("did.json");
+    if (!res.ok) return out(false, `the issuer's did.json could not be fetched (HTTP ${res.status})`);
+    const doc = await res.json();
     const vm = doc.verificationMethod.find((m) => m.id === kid);
     if (!vm) return out(false, `key ${kid} is not in the issuer's DID document`);
     if (vm.revoked) return out(false, `key ${kid} was revoked on ${vm.revoked}`);
+    if (new Date(vm.expires) < new Date()) return out(false, `key ${kid} expired on ${vm.expires}`);
     const { kty, n, e } = vm.publicKeyJwk;
     const key = await crypto.subtle.importKey("jwk", { kty, n, e }, { name: "RSA-PSS", hash: "SHA-256" }, false, [
       "verify",
@@ -148,6 +157,9 @@ $("verify").onclick = async () => {
       b64u(sig),
       new TextEncoder().encode(`${h}.${p}`),
     );
+    const { validUntil } = ok ? JSON.parse(new TextDecoder().decode(b64u(p))) : {};
+    if (new Date(validUntil) < new Date())
+      return out(false, `the signature matches, but the credential expired on ${validUntil}`);
     out(
       ok,
       ok

@@ -34,7 +34,11 @@
       <b>OPA</b><small>Policy engine. Evaluates the rules, holds the private key, signs the credential.</small>
     </div>
     <div class="lane" data-who="Issuer">
-      <b>Issuer</b><small><code>validate.posedio.com</code>. Publishes the public key in its DID document.</small>
+      <b>Issuer</b
+      ><small
+        >The configured issuer, by default <code>validate.posedio.com</code>. Publishes the public key in its DID
+        document.</small
+      >
     </div>
 
     <div class="step" data-who="Browser" data-n="1" style="--c: 1; --r: 2">
@@ -126,7 +130,7 @@
       <dt>Input digest</dt>
       <dd>SHA-256 of the checked input, so the credential is tied to this exact content</dd>
       <dt>Validity</dt>
-      <dd>90 days from the moment of the check</dd>
+      <dd>90 days from the moment of the check, but never beyond the signing key's expiry</dd>
     </dl>
   </div>
 

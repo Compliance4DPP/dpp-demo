@@ -83,6 +83,11 @@ test_unsigned_without_key if {
 	not r.vc_jwt
 }
 
+test_vc_validity_capped_at_key_expiry if {
+	vc := dpp.report.vc with input as base with time.now_ns as time.parse_rfc3339_ns("2027-04-01T00:00:00Z")
+	vc.validUntil == "2027-05-08T23:59:59Z"
+}
+
 test_no_vc_when_invalid if {
 	r := dpp.report with input as with_update("2026-10-21T15:53:00")
 	not r.vc

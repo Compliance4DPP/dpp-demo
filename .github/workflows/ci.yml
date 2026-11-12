@@ -41,6 +41,8 @@ jobs:
           jq -n --slurpfile i samples/valid_dpp.json '{input: $i[0]}' \
             | curl -fsS --retry 10 --retry-delay 1 --retry-all-errors -X POST -H 'Content-Type: application/json' -d @- http://localhost:8082/v1/data/dpp/report \
             | jq -e '.result.allow == true and (.result.vc.issuer | startswith("did:web:"))'
+      - name: Query strings are rejected (OPA's ?explain=full would expose the signing key)
+        run: test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -d '{}' 'http://localhost:8082/v1/data/dpp/report?explain=full')" = 400
       - name: Logs on failure
         if: failure()
         run: docker compose logs

@@ -4,7 +4,6 @@ package dpp
 import rego.v1
 
 # Shape follows the Gaia-X ComplianceCredential (https://docs.gaia-x.eu/ontology/development/classes/ComplianceCredential/).
-# The default key 2026-v3 expires 2027-05-08.
 # ponytail: host-only did:web (no path component); extend if an issuer DID with a path is ever needed.
 env := opa.runtime().env
 
@@ -13,6 +12,12 @@ vc_issuer := concat("", ["did:web:", object.get(env, "VC_DID_HOST", "validate.po
 vc_kid := concat("#", [vc_issuer, object.get(env, "VC_KEY_ID", "2026-v3")])
 
 vc_valid_ns := ((90 * 24) * 3600) * 1000000000
+
+# a credential must not claim to be valid longer than its signing key; the default is the expiry of key 2026-v3.
+# An unreadable VC_KEY_EXPIRES falls back to that default, so a typo cannot take the check result down.
+vc_key_expires_ns := ns if {
+	ns := time.parse_rfc3339_ns(env.VC_KEY_EXPIRES)
+} else := time.parse_rfc3339_ns("2027-05-08T23:59:59Z")
 
 vc_key := env.VC_KEY
 
@@ -43,7 +48,7 @@ credential(r) := {
 	"id": id,
 	"issuer": vc_issuer,
 	"validFrom": time.format(now),
-	"validUntil": time.format(now + vc_valid_ns),
+	"validUntil": time.format(min([now + vc_valid_ns, vc_key_expires_ns])),
 	"credentialSubject": {
 		"id": concat("", [id, "#cs"]),
 		"gx:engineVersion": object.get(opa.runtime(), "version", "unknown"),
