@@ -27,7 +27,7 @@ Any change to `.env` or to `policy/` needs the recreate command again; changes i
 ### Development
 
 ```bash
-make test        # policy tests
+make test        # policy tests and signature check tests (needs Node 22+)
 make fmt         # format policy/ and web/ before committing; CI checks it
 ```
 
