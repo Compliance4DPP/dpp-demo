@@ -5,7 +5,7 @@ PRETTIER = npx --yes prettier@3.3.3
 test: test-js
 	$(OPA) test /w/policy
 test-js:
-	node --test test/
+	node --test 'test/*.test.mjs'
 fmt:
 	$(OPA) fmt -w /w/policy
 	$(PRETTIER) --write web test
