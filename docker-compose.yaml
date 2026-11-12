@@ -3,7 +3,7 @@ services:
     image: openpolicyagent/opa:1.22.0
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policy"]
     volumes: ["./policy:/policy:ro"]
-    env_file: [{path: .env, required: false}]  # VC_KEY, VC_DID_HOST, VC_KEY_ID; see .env.example
+    env_file: [{path: .env, required: false}]
   web:
     image: nginx:1.31.8-alpine
     ports: ["127.0.0.1:8082:80"]

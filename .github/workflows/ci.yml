@@ -1,0 +1,48 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Format (opa fmt for policy, Prettier for web)
+        run: make fmt-check
+      - name: Frontend script parses
+        run: node --check web/app.js
+      - name: Compose file is valid
+        run: docker compose config -q
+
+  test:
+    name: Test
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Policy tests (opa test)
+        run: make test
+
+  smoke:
+    name: Smoke
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Start the demo
+        run: docker compose up -d --wait
+      - name: Page is served and a valid sample is compliant
+        run: |
+          curl -fsS --retry 10 --retry-delay 1 --retry-all-errors http://localhost:8082/ > /dev/null
+          jq -n --slurpfile i samples/valid_dpp.json '{input: $i[0]}' \
+            | curl -fsS --retry 10 --retry-delay 1 --retry-all-errors -X POST -H 'Content-Type: application/json' -d @- http://localhost:8082/v1/data/dpp/report \
+            | jq -e '.result.allow == true and (.result.vc.issuer | startswith("did:web:"))'
+      - name: Query strings are rejected (OPA's ?explain=full would expose the signing key)
+        run: test "$(curl -s -o /dev/null -w '%{http_code}' -X POST -d '{}' 'http://localhost:8082/v1/data/dpp/report?explain=full')" = 400
+      - name: Logs on failure
+        if: failure()
+        run: docker compose logs

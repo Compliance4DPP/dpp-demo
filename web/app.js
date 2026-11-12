@@ -7,77 +7,114 @@ document.querySelectorAll("button[data-s]").forEach((b) => {
   };
 });
 $("check").onclick = check;
-$("tech").onchange = () => { if ($("input").value.trim()) check(); };
+$("tech").onchange = () => {
+  if ($("input").value.trim()) check();
+};
+
+let runs = 0;
 
 async function check() {
-  let input;
-  try { input = JSON.parse($("input").value); }
-  catch (e) { $("verdict").textContent = "Not valid JSON: " + e.message; return; }
+  const run = ++runs;
+  $("vcbox").hidden = true;
+  $("results").innerHTML = "";
+  $("raw").textContent = "";
+  const fail = (title, detail) => {
+    if (run !== runs) return;
+    $("verdict").innerHTML = `<span class="FAIL">${title}</span><span class="hint muted">${esc(detail)}</span>`;
+  };
 
-  // OPA Data API: POST /v1/data/<package>/<rule> with {"input": ...}; report_tech = profile with technical data
-  const res = await fetch(`/v1/data/dpp/${$("tech").checked ? "report_tech" : "report"}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ input }),
-  });
-  const body = await res.json();
+  if (!$("input").value.trim()) return fail("Nothing to check", "Paste an AAS file or pick a sample first.");
+  let input;
+  try {
+    input = JSON.parse($("input").value);
+  } catch (e) {
+    return fail("Not valid JSON", e.message);
+  }
+
+  $("verdict").innerHTML = '<span class="hint muted">Checking\u2026</span>';
+  let body;
+  try {
+    const res = await fetch(`/v1/data/dpp/${$("tech").checked ? "report_tech" : "report"}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ input }),
+    });
+    if (!res.ok) return fail("Check failed", "The policy service answered HTTP " + res.status + ".");
+    body = await res.json();
+  } catch (e) {
+    return fail("Check failed", "The policy service could not be reached (" + e.message + ").");
+  }
+  if (run !== runs) return;
   $("raw").textContent = JSON.stringify(body, null, 2);
 
   const r = body.result;
-  if (!r) { $("verdict").textContent = "OPA returned no result"; return; }
+  if (!r) return fail("No result", "OPA returned no result for this input.");
   $("verdict").innerHTML = r.allow
     ? '<span class="PASS">Compliant</span>'
     : `<span class="FAIL">Not compliant</span> (${r.failed} failed)`;
-  showResults(r.results);
+  showResults(r.results, r.groups);
   showVc(r);
 }
 
-const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 
-// Results, grouped like the rule groups on the "How it works" page.
-const groups = [
-  ["AAS structure", /^AAS-/],
-  ["DppMetadata submodel", /^(STRUCT-|SEM-submodel$|DUP-)/],
-  ["Presence", /^(MAND-|VAL-.*-nonempty$)/],
-  ["Types and semanticIds", /^(TYPE-|SEM-(?!item-|contentSpecificationIds$))/],
-  ["Granularity", /^VAL-granularity/],
-  ["contentSpecificationIds", /^(OPT-|SML-|SEM-)/],
-  ["lastUpdate", /^DT-/],
-  ["Technical data", /^TECH-/],
-  ["Other", /./],
-];
 const order = { FAIL: 0, SKIP: 1, PASS: 2 };
 const n = (rows, s) => rows.filter((x) => x.status === s).length;
 
-function showResults(results) {
-  const by = new Map(groups.map(([name]) => [name, []]));
-  for (const x of results) by.get(groups.find(([, re]) => re.test(x.check))[0]).push(x);
-  const count = (s, label) => `<span class="count ${n(results, s) ? s : "SKIP"}"><b>${n(results, s)}</b> ${label}</span>`  // zero counts stay grey;
+function showResults(results, groups) {
+  const by = groups.map((name) => [name, results.filter((x) => x.group === name)]);
+  // zero counts stay grey
+  const count = (s, label) =>
+    `<span class="count ${n(results, s) ? s : "SKIP"}"><b>${n(results, s)}</b> ${label}</span>`;
   $("results").innerHTML =
     `<p class="counts">${count("PASS", "passed")}${count("FAIL", "failed")}${count("SKIP", "skipped")}</p>` +
-    [...by].filter(([, rows]) => rows.length).map(([name, rows]) => {
-      const fail = n(rows, "FAIL"), skip = n(rows, "SKIP");
-      rows.sort((a, b) => order[a.status] - order[b.status]);  // failures first; groups with a failure start open
-      return `<details class="grp"${fail ? " open" : ""}><summary><b>${name}</b>` +
-        `<span class="${fail ? "FAIL" : "PASS"}">${fail ? fail + " failed" : "all passed"}</span>` +
-        `<span class="muted">${rows.length} check${rows.length > 1 ? "s" : ""}${skip ? ", " + skip + " skipped" : ""}</span></summary><table>` +
-        rows.map((x) => `<tr><td class="${x.status}">${x.status}</td><td>${esc(x.message)}</td><td><code>${esc(x.check)}</code></td></tr>`).join("") +
-        "</table></details>";
-    }).join("");
+    by
+      .filter(([, rows]) => rows.length)
+      .map(([name, rows]) => {
+        const fail = n(rows, "FAIL"),
+          skip = n(rows, "SKIP");
+        rows.sort((a, b) => order[a.status] - order[b.status]);
+        return (
+          `<details class="grp"${fail ? " open" : ""}><summary><b>${esc(name)}</b>` +
+          `<span class="${fail ? "FAIL" : "PASS"}">${fail ? fail + " failed" : "all passed"}</span>` +
+          `<span class="muted">${rows.length} check${rows.length > 1 ? "s" : ""}${skip ? ", " + skip + " skipped" : ""}</span></summary><table>` +
+          rows
+            .map(
+              (x) =>
+                `<tr><td class="${x.status}">${x.status}</td><td>${esc(x.message)}</td><td><code>${esc(x.check)}</code></td></tr>`,
+            )
+            .join("") +
+          "</table></details>"
+        );
+      })
+      .join("");
 }
 
 function showVc(r) {
   $("vcbox").hidden = !r.vc;
   if (!r.vc) return;
-  const cs = r.vc.credentialSubject, c = cs["gx:compliantCredentials"][0], signed = !!r.vc_jwt;
+  const cs = r.vc.credentialSubject,
+    c = cs["gx:compliantCredentials"][0],
+    signed = !!r.vc_jwt;
   $("vcinfo").innerHTML = [
-    ["Signature", signed ? "signed (PS256), verified below against the issuer's public key" : r.vc_error || "unsigned: no signing key configured"],
+    [
+      "Signature",
+      signed
+        ? "signed (PS256), verified below against the issuer's public key"
+        : r.vc_error || "unsigned: no signing key configured",
+    ],
     ["Subject", c.id],
     ["Rules", cs["gx:rulesVersion"] + ", " + cs["gx:validatedCriteria"].length + " checks passed"],
     ["Input digest", c.digestSRI],
     ["Valid", r.vc.validFrom + " to " + r.vc.validUntil],
-  ].map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
-  $("vctitle").textContent = signed ? "Credential issued by " : r.vc_error ? "Credential NOT signed: " : "Unsigned credential for ";
+  ]
+    .map(([k, v]) => `<dt>${k}</dt><dd>${esc(v)}</dd>`)
+    .join("");
+  $("vctitle").textContent = signed
+    ? "Credential issued by "
+    : r.vc_error
+      ? "Credential NOT signed: "
+      : "Unsigned credential for ";
   $("vcbox").className = signed ? "" : "bad";
   $("vcissuer").textContent = r.vc.issuer;
   $("jwt").value = r.vc_jwt || "";
@@ -85,28 +122,51 @@ function showVc(r) {
   $("vcverify").textContent = "";
   for (const id of ["verify", "copy", "jwt"]) $(id).hidden = !signed;
   document.querySelector('label[for="jwt"]').hidden = !signed;
-  if (signed) $("verify").onclick();  // verify right away, so a wrong key is visible without a click
+  if (signed) $("verify").onclick(); // verify right away, so a wrong key is visible without a click
 }
 
 $("copy").onclick = () => navigator.clipboard.writeText($("jwt").value);
 
 const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
 
-// Verifies the JWT in the browser against the issuer's published DID document (did.json is proxied by nginx: no CORS there).
+// did.json comes through nginx: the issuer sends no CORS header
 $("verify").onclick = async () => {
-  const out = (ok, msg) => { $("vcverify").innerHTML = `<span class="${ok ? "PASS" : "FAIL"}">${ok ? "Signature valid" : "Not valid"}</span>: ${esc(msg)} <span class="muted">(checked ${new Date().toLocaleTimeString()})</span>`; };
+  const out = (ok, msg) => {
+    $("vcverify").innerHTML =
+      `<span class="${ok ? "PASS" : "FAIL"}">${ok ? "Signature valid" : "Not valid"}</span>: ${esc(msg)} <span class="muted">(checked ${new Date().toLocaleTimeString()})</span>`;
+  };
   $("vcverify").textContent = "Checking\u2026";
-  await new Promise((r) => setTimeout(r, 300));  // long enough to see that a click re-checks
+  await new Promise((r) => setTimeout(r, 300)); // long enough to see that a click re-checks
   try {
     const [h, p, sig] = $("jwt").value.trim().split(".");
     const { kid } = JSON.parse(new TextDecoder().decode(b64u(h)));
-    const doc = await (await fetch("did.json")).json();
+    const res = await fetch("did.json");
+    if (!res.ok) return out(false, `the issuer's did.json could not be fetched (HTTP ${res.status})`);
+    const doc = await res.json();
     const vm = doc.verificationMethod.find((m) => m.id === kid);
     if (!vm) return out(false, `key ${kid} is not in the issuer's DID document`);
     if (vm.revoked) return out(false, `key ${kid} was revoked on ${vm.revoked}`);
+    if (new Date(vm.expires) < new Date()) return out(false, `key ${kid} expired on ${vm.expires}`);
     const { kty, n, e } = vm.publicKeyJwk;
-    const key = await crypto.subtle.importKey("jwk", { kty, n, e }, { name: "RSA-PSS", hash: "SHA-256" }, false, ["verify"]);
-    const ok = await crypto.subtle.verify({ name: "RSA-PSS", saltLength: 32 }, key, b64u(sig), new TextEncoder().encode(`${h}.${p}`));
-    out(ok, ok ? `signed by ${kid}, public key fetched from the issuer's did.json` : `signature does not match the content (key ${kid})`);
-  } catch (err) { out(false, "not a readable JWT (" + err.message + ")"); }
+    const key = await crypto.subtle.importKey("jwk", { kty, n, e }, { name: "RSA-PSS", hash: "SHA-256" }, false, [
+      "verify",
+    ]);
+    const ok = await crypto.subtle.verify(
+      { name: "RSA-PSS", saltLength: 32 },
+      key,
+      b64u(sig),
+      new TextEncoder().encode(`${h}.${p}`),
+    );
+    const { validUntil } = ok ? JSON.parse(new TextDecoder().decode(b64u(p))) : {};
+    if (new Date(validUntil) < new Date())
+      return out(false, `the signature matches, but the credential expired on ${validUntil}`);
+    out(
+      ok,
+      ok
+        ? `signed by ${kid}, public key fetched from the issuer's did.json`
+        : `signature does not match the content (key ${kid})`,
+    );
+  } catch (err) {
+    out(false, "not a readable JWT (" + err.message + ")");
+  }
 };

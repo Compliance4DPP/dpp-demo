@@ -8,7 +8,6 @@ import rego.v1
 
 cds := "https://admin-shell.io/idta/cds/"
 
-# idShort -> expected valueType, mandatory (cardinality 1)
 attributes := {
 	"digitalProductPassportId": {"valueType": "xs:string", "mandatory": true},
 	"uniqueProductIdentifier": {"valueType": "xs:string", "mandatory": true},
@@ -40,13 +39,25 @@ elements[id] := e if {
 	e := [x | some x in els; x.idShort == id][0]
 }
 
-result(check, status, message) := {"check": check, "status": status, "message": message}
+# rule groups, in display order; the number in each result(...) call is an index into this list
+groups := [
+	"AAS structure",
+	"DppMetadata submodel",
+	"Presence",
+	"Types and semanticIds",
+	"Granularity",
+	"contentSpecificationIds",
+	"lastUpdate",
+	"Technical data",
+]
+
+result(g, check, status, message) := {"group": groups[g], "check": check, "status": status, "message": message}
 
 bool_status(true) := "PASS"
 
 bool_status(false) := "FAIL"
 
-sem_ok(node, expected) := true if {
+sem_ok(node, expected) if {
 	some k in node.semanticId.keys
 	k.value == expected
 } else := false
@@ -59,22 +70,22 @@ roots_ok if {
 	is_array(input.submodels)
 }
 
-results contains result("AAS-roots", bool_status(roots_ok), "'assetAdministrationShells' and 'submodels' are arrays")
+results contains result(0, "AAS-roots", bool_status(roots_ok), "'assetAdministrationShells' and 'submodels' are arrays")
 
-shell_ok(s) := true if {
+shell_ok(s) if {
 	is_string(s.id)
 	s.id != ""
 	is_object(s.assetInformation)
 } else := false
 
-results contains result("AAS-shell", bool_status(shell_ok(s)), sprintf("shell '%v' has id and assetInformation", [object.get(s, "idShort", "?")])) if some s in shells
+results contains result(0, "AAS-shell", bool_status(shell_ok(s)), sprintf("shell '%v' has id and assetInformation", [object.get(s, "idShort", "?")])) if some s in shells
 
-submodel_ok(s) := true if {
+submodel_ok(s) if {
 	is_string(s.id)
 	s.id != ""
 } else := false
 
-results contains result("AAS-submodel-id", bool_status(submodel_ok(s)), sprintf("submodel '%v' has an id", [object.get(s, "idShort", "?")])) if some s in all_submodels
+results contains result(0, "AAS-submodel-id", bool_status(submodel_ok(s)), sprintf("submodel '%v' has an id", [object.get(s, "idShort", "?")])) if some s in all_submodels
 
 submodel_ids := {s.id | some s in all_submodels; is_string(s.id)}
 
@@ -87,25 +98,25 @@ refs contains k.value if {
 
 unresolved := refs - submodel_ids
 
-results contains result("AAS-refs", "PASS", "all submodel references resolve") if {
+results contains result(0, "AAS-refs", "PASS", "all submodel references resolve") if {
 	count(shells) > 0
 	count(unresolved) == 0
 }
 
-results contains result("AAS-refs", "FAIL", sprintf("unresolved submodel references: %v", [unresolved])) if count(unresolved) > 0
+results contains result(0, "AAS-refs", "FAIL", sprintf("unresolved submodel references: %v", [unresolved])) if count(unresolved) > 0
 
-results contains result("AAS-dpp-referenced", bool_status(submodel.id in refs), "DppMetadata is referenced by an AAS") if submodel
+results contains result(0, "AAS-dpp-referenced", bool_status(submodel.id in refs), "DppMetadata is referenced by an AAS") if submodel
 
 # ---- 1. DppMetadata submodel ----
-results contains result("STRUCT-submodel", "FAIL", "No submodel with idShort 'DppMetadata'") if count(candidates) == 0
+results contains result(1, "STRUCT-submodel", "FAIL", "No submodel with idShort 'DppMetadata'") if count(candidates) == 0
 
-results contains result("STRUCT-submodel", "PASS", "DppMetadata submodel found") if count(candidates) == 1
+results contains result(1, "STRUCT-submodel", "PASS", "DppMetadata submodel found") if count(candidates) == 1
 
-results contains result("STRUCT-submodel", "FAIL", "More than one submodel with idShort 'DppMetadata'") if count(candidates) > 1
+results contains result(1, "STRUCT-submodel", "FAIL", "More than one submodel with idShort 'DppMetadata'") if count(candidates) > 1
 
-results contains result("SEM-submodel", bool_status(sem_ok(submodel, concat("", [cds, "dppMetadata/1"]))), "submodel semanticId is .../cds/dppMetadata/1") if submodel
+results contains result(1, "SEM-submodel", bool_status(sem_ok(submodel, concat("", [cds, "dppMetadata/1"]))), "submodel semanticId is .../cds/dppMetadata/1") if submodel
 
-results contains result(sprintf("DUP-%s", [id]), "FAIL", sprintf("idShort '%s' occurs more than once", [id])) if {
+results contains result(1, sprintf("DUP-%s", [id]), "FAIL", sprintf("idShort '%s' occurs more than once", [id])) if {
 	some id in ids
 	count([x | some x in els; x.idShort == id]) > 1
 }
@@ -125,7 +136,7 @@ presence_text(true) := "present"
 
 presence_text(false) := "missing"
 
-results contains result(sprintf("MAND-%s", [id]), status, msg) if {
+results contains result(2, sprintf("MAND-%s", [id]), status, msg) if {
 	submodel
 	some id, a in attributes
 	present := object.get(elements, id, null) != null
@@ -133,31 +144,30 @@ results contains result(sprintf("MAND-%s", [id]), status, msg) if {
 	msg := sprintf("%s attribute '%s' %s", [cond_name(a.mandatory), id, presence_text(present)])
 }
 
-# a mandatory attribute must carry a non-blank string value
-has_value(e) := true if {
+has_value(e) if {
 	is_string(e.value)
 	trim_space(e.value) != ""
 } else := false
 
-results contains result(sprintf("VAL-%s-nonempty", [id]), bool_status(has_value(e)), sprintf("mandatory attribute '%s' has a non-blank value", [id])) if {
+results contains result(2, sprintf("VAL-%s-nonempty", [id]), bool_status(has_value(e)), sprintf("mandatory attribute '%s' has a non-blank value", [id])) if {
 	some id, a in attributes
 	a.mandatory
 	e := elements[id]
 }
 
 # ---- 3. type checks and semanticIds (only for present elements) ----
-type_ok(e, a) := true if {
+type_ok(e, a) if {
 	e.modelType == "Property"
 	e.valueType == a.valueType
 } else := false
 
-results contains result(sprintf("TYPE-%s", [id]), bool_status(type_ok(e, a)), msg) if {
+results contains result(3, sprintf("TYPE-%s", [id]), bool_status(type_ok(e, a)), msg) if {
 	some id, a in attributes
 	e := elements[id]
 	msg := sprintf("modelType=%v valueType=%v, expected Property/%s", [object.get(e, "modelType", "none"), object.get(e, "valueType", "none"), a.valueType])
 }
 
-results contains result(sprintf("SEM-%s", [id]), bool_status(sem_ok(e, concat("", [cds, id, "/1"]))), sprintf("semanticId is .../cds/%s/1", [id])) if {
+results contains result(3, sprintf("SEM-%s", [id]), bool_status(sem_ok(e, concat("", [cds, id, "/1"]))), sprintf("semanticId is .../cds/%s/1", [id])) if {
 	some id, _ in attributes
 	e := elements[id]
 }
@@ -168,19 +178,19 @@ supplemental := {
 	"lastUpdate": "https://admin-shell.io/aas/3/2/AdministrativeInformation/updatedAt",
 }
 
-supp_ok(e, expected) := true if {
+supp_ok(e, expected) if {
 	some r in e.supplementalSemanticIds
 	some k in r.keys
 	k.value == expected
 } else := false
 
-results contains result(sprintf("SEM-%s-supplemental", [id]), bool_status(supp_ok(elements[id], expected)), sprintf("supplementalSemanticId is %s", [expected])) if {
+results contains result(3, sprintf("SEM-%s-supplemental", [id]), bool_status(supp_ok(elements[id], expected)), sprintf("supplementalSemanticId is %s", [expected])) if {
 	some id, expected in supplemental
 	elements[id]
 }
 
 # ---- 4. granularity enumeration ----
-results contains result("VAL-granularity", bool_status(object.get(elements.granularity, "value", null) in granularity_values), sprintf("granularity = %v, expected Model, Item or Batch", [object.get(elements.granularity, "value", null)])) if elements.granularity
+results contains result(4, "VAL-granularity", bool_status(object.get(elements.granularity, "value", null) in granularity_values), sprintf("granularity = %v, expected Model, Item or Batch", [object.get(elements.granularity, "value", null)])) if elements.granularity
 
 # Table 2: granularity must map to the AAS assetKind of the shell that references the DPP submodel
 asset_kind := {"Model": "Type", "Item": "Instance", "Batch": "Batch"}
@@ -192,11 +202,11 @@ dpp_shells contains sh if {
 	k.value == submodel.id
 }
 
-kind_ok(sh, g) := true if {
+kind_ok(sh, g) if {
 	sh.assetInformation.assetKind == asset_kind[g]
 } else := false
 
-results contains result("VAL-granularity-assetKind", bool_status(kind_ok(sh, g)), sprintf("granularity %v maps to assetKind %v; shell '%v' has %v", [g, object.get(asset_kind, g, "none"), object.get(sh, "idShort", "?"), object.get(object.get(sh, "assetInformation", {}), "assetKind", "none")])) if {
+results contains result(4, "VAL-granularity-assetKind", bool_status(kind_ok(sh, g)), sprintf("granularity %v maps to assetKind %v; shell '%v' has %v", [g, object.get(asset_kind, g, "none"), object.get(sh, "idShort", "?"), object.get(object.get(sh, "assetInformation", {}), "assetKind", "none")])) if {
 	g := elements.granularity.value
 	some sh in dpp_shells
 }
@@ -209,36 +219,36 @@ csi_items := v if {
 	is_array(v)
 } else := []
 
-csi_ok(e) := true if {
+csi_ok(e) if {
 	e.modelType == "SubmodelElementList"
 	e.typeValueListElement == "Property"
 	e.valueTypeListElement == "xs:string"
 	object.get(e, "orderRelevant", true) == false
 } else := false
 
-results contains result("OPT-contentSpecificationIds", "SKIP", "Optional attribute 'contentSpecificationIds' missing") if {
+results contains result(5, "OPT-contentSpecificationIds", "SKIP", "Optional attribute 'contentSpecificationIds' missing") if {
 	submodel
 	not csi
 }
 
-results contains result("OPT-contentSpecificationIds", "PASS", "Optional attribute 'contentSpecificationIds' present") if csi
+results contains result(5, "OPT-contentSpecificationIds", "PASS", "Optional attribute 'contentSpecificationIds' present") if csi
 
-results contains result("SML-contentSpecificationIds", bool_status(csi_ok(csi)), "SubmodelElementList of Property/xs:string, orderRelevant=false") if csi
+results contains result(5, "SML-contentSpecificationIds", bool_status(csi_ok(csi)), "SubmodelElementList of Property/xs:string, orderRelevant=false") if csi
 
-results contains result("SEM-contentSpecificationIds", bool_status(sem_ok(csi, concat("", [cds, "contentSpecificationIds/1"]))), "semanticId is .../cds/contentSpecificationIds/1") if csi
+results contains result(5, "SEM-contentSpecificationIds", bool_status(sem_ok(csi, concat("", [cds, "contentSpecificationIds/1"]))), "semanticId is .../cds/contentSpecificationIds/1") if csi
 
-results contains result("SML-contentSpecificationIds-count", bool_status(count(csi_items) >= 1), sprintf("%d item(s), at least 1 required", [count(csi_items)])) if csi
+results contains result(5, "SML-contentSpecificationIds-count", bool_status(count(csi_items) >= 1), sprintf("%d item(s), at least 1 required", [count(csi_items)])) if csi
 
-item_ok(it) := true if {
+item_ok(it) if {
 	it.modelType == "Property"
 	it.valueType == "xs:string"
 	is_string(it.value)
 	trim_space(it.value) != ""
 } else := false
 
-results contains result(sprintf("SML-item-%d", [i]), bool_status(item_ok(it)), "item is Property/xs:string with a non-empty value") if some i, it in csi_items
+results contains result(5, sprintf("SML-item-%d", [i]), bool_status(item_ok(it)), "item is Property/xs:string with a non-empty value") if some i, it in csi_items
 
-results contains result(sprintf("SEM-item-%d", [i]), bool_status(sem_ok(it, concat("", [cds, "contentSpecificationId/1"]))), "item semanticId is .../cds/contentSpecificationId/1") if some i, it in csi_items
+results contains result(5, sprintf("SEM-item-%d", [i]), bool_status(sem_ok(it, concat("", [cds, "contentSpecificationId/1"]))), "item semanticId is .../cds/contentSpecificationId/1") if some i, it in csi_items
 
 # ---- 6. date-time: well-formed, and timezone required (spec: lastUpdate is UTC-based) ----
 dt_re := `^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$`
@@ -250,24 +260,24 @@ with_tz(v) := v if has_tz(v)
 with_tz(v) := concat("", [v, "Z"]) if not has_tz(v)
 
 # calendar/range validation is delegated to the RFC 3339 parser (tz appended when absent)
-well_formed(v) := true if {
+well_formed(v) if {
 	regex.match(dt_re, v)
 	time.parse_rfc3339_ns(with_tz(v))
 } else := false
 
-results contains result("DT-lastUpdate-wellformed", bool_status(well_formed(v)), sprintf("lastUpdate = %v", [v])) if {
+results contains result(6, "DT-lastUpdate-wellformed", bool_status(well_formed(v)), sprintf("lastUpdate = %v", [v])) if {
 	v := elements.lastUpdate.value
 	is_string(v)
 }
 
-results contains result("DT-lastUpdate-timezone", bool_status(has_tz(v)), "timezone designator (Z or +hh:mm) is required") if {
+results contains result(6, "DT-lastUpdate-timezone", bool_status(has_tz(v)), "timezone designator (Z or +hh:mm) is required") if {
 	v := elements.lastUpdate.value
 	is_string(v)
 	well_formed(v)
 }
 
 # spec: "Timestamp UTC-based", so only Z or an offset of zero is accepted
-results contains result("DT-lastUpdate-utc", bool_status(regex.match(`(Z|[+-]00:00)$`, v)), "UTC required (Z or +00:00)") if {
+results contains result(6, "DT-lastUpdate-utc", bool_status(regex.match(`(Z|[+-]00:00)$`, v)), "UTC required (Z or +00:00)") if {
 	v := elements.lastUpdate.value
 	is_string(v)
 	well_formed(v)
@@ -275,74 +285,14 @@ results contains result("DT-lastUpdate-utc", bool_status(regex.match(`(Z|[+-]00:
 }
 
 # ---- report ----
-make_report(rs) := {"allow": count(f) == 0, "failed": count(f), "results": sort(rs)} if {
+make_report(rs) := {"allow": count(f) == 0, "failed": count(f), "groups": groups, "results": sort(rs)} if {
 	f := [r | some r in rs; r.status == "FAIL"]
 }
 
-# profile "IDTA only" (default) and profile "IDTA + technical data"
 report := with_vc(make_report(results))
 
+# with_vc (vc.rego) adds the compliance credential when the check passes
 report_tech := with_vc(make_report(results | tech_results))
-
-# ---- compliance credential (only when the check passes) ----
-# Shape follows the Gaia-X ComplianceCredential (https://docs.gaia-x.eu/ontology/development/classes/ComplianceCredential/).
-# Signed as VC-JWT when VC_KEY (RSA private key PEM, from the gitignored .env) is set; unsigned otherwise.
-# Issuer and key id come from the environment (.env); defaults: validate.posedio.com, key 2026-v3 (PS256, expires 2027-05-08).
-# ponytail: host-only did:web (no path component); extend if an issuer DID with a path is ever needed.
-env := opa.runtime().env
-
-vc_issuer := concat("", ["did:web:", object.get(env, "VC_DID_HOST", "validate.posedio.com")])
-
-vc_kid := concat("#", [vc_issuer, object.get(env, "VC_KEY_ID", "2026-v3")])
-
-vc_valid_ns := ((90 * 24) * 3600) * 1000000000
-
-vc_key := env.VC_KEY
-
-vc_jwk := crypto.x509.parse_rsa_private_key(vc_key)
-
-vc_header := {"alg": "PS256", "typ": "vc+jwt", "cty": "vc", "iss": vc_issuer, "kid": vc_kid}
-
-with_vc(r) := object.union(r, vc_fields(credential(r))) if r.allow
-
-with_vc(r) := r if not r.allow
-
-# undefined when the key is missing or unusable (builtin errors are undefined, not fatal)
-sign(vc) := io.jwt.encode_sign(vc_header, vc, vc_jwk)
-
-vc_fields(vc) := {"vc": vc, "vc_jwt": jwt} if jwt := sign(vc)
-
-vc_fields(vc) := {"vc": vc} if not vc_key
-
-# a broken key must not take the check result down with it
-vc_fields(vc) := {"vc": vc, "vc_error": "VC_KEY is set but is not a usable RSA private key; the credential was not signed"} if {
-	vc_key
-	not sign(vc)
-}
-
-credential(r) := {
-	"@context": ["https://www.w3.org/ns/credentials/v2", "https://w3id.org/gaia-x/2.5.0#"],
-	"type": ["VerifiableCredential", "gx:ComplianceCredential"],
-	"id": id,
-	"issuer": vc_issuer,
-	"validFrom": time.format(now),
-	"validUntil": time.format(now + vc_valid_ns),
-	"credentialSubject": {
-		"id": concat("", [id, "#cs"]),
-		"gx:engineVersion": object.get(opa.runtime(), "version", "unknown"),
-		"gx:rulesVersion": "IDTA-02099-1 v1.0",
-		"gx:compliantCredentials": [{
-			"id": submodel.id,
-			"gx:credentialType": "DppMetadata",
-			# digest of OPA's canonical JSON of the input (sorted keys), not of the uploaded file bytes
-			"digestSRI": concat("", ["sha256-", crypto.sha256(json.marshal(input))]),
-		}],
-		"gx:validatedCriteria": [x.check | some x in r.results; x.status == "PASS"],
-	},
-} if {
-	now := time.now_ns()
-	id := concat("", ["urn:uuid:", uuid.rfc4122("vc")])
-}
 
 # ---- 7. technical data (demo only, not part of IDTA 02099-1) ----
 # Port of check_technical_data in gaiax_demonstrator: a submodel whose idShort contains "technical"
@@ -416,21 +366,21 @@ tech_best := i if {
 
 tech := tech_candidates[tech_best]
 
-tech_results contains result("TECH-submodel", "FAIL", "no submodel with 'technical' in its idShort") if {
+tech_results contains result(7, "TECH-submodel", "FAIL", "no submodel with 'technical' in its idShort") if {
 	submodel
 	count(tech_candidates) == 0
 }
 
-tech_results contains result("TECH-submodel", "PASS", sprintf("technical-data submodel '%s' found (%d candidate(s))", [tech.idShort, count(tech_candidates)])) if tech
+tech_results contains result(7, "TECH-submodel", "PASS", sprintf("technical-data submodel '%s' found (%d candidate(s))", [tech.idShort, count(tech_candidates)])) if tech
 
-tech_results contains result("TECH-elements", bool_status(is_array(tech.submodelElements)), "submodelElements is missing or not an array") if {
+tech_results contains result(7, "TECH-elements", bool_status(is_array(tech.submodelElements)), "submodelElements is missing or not an array") if {
 	tech
 	not is_array(tech.submodelElements)
 }
 
-tech_results contains result("TECH-elements", bool_status(c[0] >= tech_min_elements), sprintf("%d element(s) with a value, %d without; at least %d required", [c[0], c[1], tech_min_elements])) if {
+tech_results contains result(7, "TECH-elements", bool_status(c[0] >= tech_min_elements), sprintf("%d element(s) with a value, %d without; at least %d required", [c[0], c[1], tech_min_elements])) if {
 	is_array(tech.submodelElements)
 	c := tech_counts[tech_best]
 }
 
-tech_results contains result("TECH-ref", bool_status(tech.id in refs), sprintf("'%s' is referenced by an AAS", [tech.idShort])) if tech
+tech_results contains result(7, "TECH-ref", bool_status(tech.id in refs), sprintf("'%s' is referenced by an AAS", [tech.idShort])) if tech

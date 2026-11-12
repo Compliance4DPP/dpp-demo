@@ -83,9 +83,21 @@ test_unsigned_without_key if {
 	not r.vc_jwt
 }
 
+test_vc_validity_capped_at_key_expiry if {
+	vc := dpp.report.vc with input as base with time.now_ns as time.parse_rfc3339_ns("2027-04-01T00:00:00Z")
+	vc.validUntil == "2027-05-08T23:59:59Z"
+}
+
 test_no_vc_when_invalid if {
 	r := dpp.report with input as with_update("2026-10-21T15:53:00")
 	not r.vc
+}
+
+test_every_result_has_a_group if {
+	r := dpp.report_tech with input as base
+	every x in r.results {
+		x.group in r.groups
+	}
 }
 
 test_missing_mandatory if {
@@ -203,7 +215,6 @@ test_missing_supplemental_last_update if {
 	not dpp.report.allow with input as i
 }
 
-# ---- technical data ----
 tech_sm(els) := {"id": "sm-tech", "idShort": "Technical Data", "submodelElements": els}
 
 tech_ref := {"type": "ModelReference", "keys": [{"type": "Submodel", "value": "sm-tech"}]}

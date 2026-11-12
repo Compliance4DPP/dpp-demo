@@ -1,87 +1,214 @@
 <!doctype html>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>How it works · DPP policy check (OPA)</title>
-<link rel="stylesheet" href="style.css">
-<nav><div><a href="./">Check</a><a href="how.html" aria-current="page">How it works</a></div></nav>
-<main>
-<h1>How the check works</h1>
-<p class="lead">The browser only sends the file and shows the answer. Every rule lives in <code>policy/dpp.rego</code> and runs inside Open Policy Agent. A file that passes gets a signed credential.</p>
-
-<h2>Request flow</h2>
-<p class="muted">Each column is one party. Read the numbers top to bottom; arrows show a request going to the next party and the answer coming back.</p>
-<div class="lanes">
-  <div class="lane" data-who="Browser"><b>Browser</b><small>Client. Loads the file, shows the result, verifies the signature.</small></div>
-  <div class="lane" data-who="nginx"><b>nginx</b><small>Reverse proxy. Serves the page, forwards to OPA and to the issuer.</small></div>
-  <div class="lane" data-who="OPA"><b>OPA</b><small>Policy engine. Evaluates the rules, holds the private key, signs the credential.</small></div>
-  <div class="lane" data-who="Issuer"><b>Issuer</b><small><code>validate.posedio.com</code>. Publishes the public key in its DID document.</small></div>
-
-  <div class="step" data-who="Browser" data-n="1" style="--c:1;--r:2"><b>Load a file</b><small>Paste AAS JSON or pick a sample</small></div>
-  <div class="step" data-who="Browser" data-n="2" style="--c:1;--r:3"><b>Parse</b><small>Check that it is valid JSON</small></div>
-  <div class="step go" data-who="Browser" data-n="3" style="--c:1;--r:4"><b>Send the file</b><small><code>POST /v1/data/dpp/report</code>, or <code>report_tech</code> with "also require technical data"</small></div>
-  <div class="step go" data-who="nginx" data-n="4" style="--c:2;--r:4"><b>Forward</b><small>Only these two paths reach OPA</small></div>
-  <div class="step" data-who="OPA" data-n="5" style="--c:3;--r:4"><b>Evaluate</b><small>Run every rule group below</small></div>
-  <div class="step" data-who="OPA" data-n="6" style="--c:3;--r:5"><b>Issue credential</b><small>Only if no rule failed: build the credential and sign it as a JWT (PS256) with the issuer's private key</small></div>
-  <div class="step sub back" data-who="OPA" style="--c:3;--r:6"><b>Answer</b><small><code>allow</code>, <code>results</code>, and <code>vc</code> + <code>vc_jwt</code> if compliant</small></div>
-  <div class="step sub back" data-who="nginx" style="--c:2;--r:6"><b>Pass back</b><small>Returns OPA's answer unchanged</small></div>
-  <div class="step" data-who="Browser" data-n="7" style="--c:1;--r:6"><b>Show result</b><small>Verdict, credential and the checks by rule group</small></div>
-  <div class="step go" data-who="Browser" data-n="8" style="--c:1;--r:7"><b>Verify signature</b><small>Fetch the issuer's public key and check the JWT in the browser</small></div>
-  <div class="step sub go" data-who="nginx" style="--c:2;--r:7"><b>Proxy</b><small>Passes <a href="did.json" target="_blank" rel="noopener">/did.json</a> on to the issuer</small></div>
-  <div class="wire" style="--c:3;--r:7"></div>
-  <div class="step sub" data-who="Issuer" style="--c:4;--r:7"><b>did.json</b><small>Public key and whether it is revoked</small></div>
-</div>
-
-<h2>Compliance credential</h2>
-<div class="cred">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>How it works · DPP metadata check</title>
+<link rel="stylesheet" href="style.css" />
+<nav>
   <div>
-    <p>A compliant file gets a verifiable credential: a signed statement that this file passed the check. A file with any FAIL gets none.</p>
-    <p>Whoever receives it can verify it against the issuer's public key, without running the check again and without trusting this server.</p>
-    <p class="muted">Changing a single character of the JWT makes verification fail, as does a key that is revoked in or missing from the issuer's DID document. The private key is read from the server's environment and never reaches the browser; without it the credential is returned unsigned.</p>
+    <a class="brand" href="./"
+      ><span class="mark" aria-hidden="true">&#10003;</span><span class="name">DPP metadata check</span></a
+    ><a href="./">Check</a><a href="how.html" aria-current="page">How it works</a
+    ><a class="repo" href="https://github.com/Compliance4DPP/dpp-demo" target="_blank" rel="noopener">GitHub</a>
   </div>
-  <dl>
-    <dt>Shape</dt><dd>Gaia-X <a href="https://docs.gaia-x.eu/ontology/development/classes/ComplianceCredential/" target="_blank" rel="noopener">ComplianceCredential</a>; returned as <code>vc</code> (JSON) and <code>vc_jwt</code> (signed)</dd>
-    <dt>Issuer</dt><dd><code>did:web:validate.posedio.com</code>, key <code>#2026-v3</code> by default; set with <code>VC_DID_HOST</code> and <code>VC_KEY_ID</code> in <code>.env</code></dd>
-    <dt>Subject</dt><dd>The id of the DppMetadata submodel that was checked</dd>
-    <dt>Rules</dt><dd>IDTA-02099-1 v1.0, with the list of checks that passed</dd>
-    <dt>Input digest</dt><dd>SHA-256 of the checked input, so the credential is tied to this exact content</dd>
-    <dt>Validity</dt><dd>90 days from the moment of the check</dd>
-  </dl>
-</div>
+</nav>
+<main>
+  <h1>How the check works</h1>
+  <p class="lead">
+    The browser only sends the file and shows the answer. Every rule lives in <code>policy/dpp.rego</code> and runs
+    inside Open Policy Agent. A file that passes gets a signed credential, built in <code>policy/vc.rego</code>.
+  </p>
 
-<h2>Rule groups</h2>
-<p class="muted">All groups run on every request, and one failing rule does not stop the others. Rules about an attribute only run when that attribute is present.</p>
-<ol class="groups">
-  <li data-n="0"><h3>AAS structure</h3>
-    <p>The root collections are arrays, every shell has an id and assetInformation, every submodel has an id, all submodel references resolve, and a shell references DppMetadata.</p>
-    <span class="chip">AAS-*</span></li>
-  <li data-n="1"><h3>DppMetadata submodel</h3>
-    <p>Exactly one submodel with idShort <code>DppMetadata</code>, semanticId <code>…/cds/dppMetadata/1</code>, and no duplicate idShorts inside it.</p>
-    <span class="chip">STRUCT-submodel</span><span class="chip">SEM-submodel</span><span class="chip">DUP-*</span></li>
-  <li data-n="2"><h3>Presence</h3>
-    <p>The 7 mandatory attributes are present with a non-blank value. <code>facilityId</code> is optional.</p>
-    <span class="chip">MAND-*</span><span class="chip">VAL-*-nonempty</span></li>
-  <li data-n="3"><h3>Types and semanticIds</h3>
-    <p>Each attribute is a <code>Property</code> with the expected valueType and semanticId <code>…/cds/&lt;name&gt;/1</code>. <code>granularity</code> and <code>lastUpdate</code> also need their supplementalSemanticIds.</p>
-    <span class="chip">TYPE-*</span><span class="chip">SEM-*</span></li>
-  <li data-n="4"><h3>Granularity</h3>
-    <p>The value is <code>Model</code>, <code>Item</code> or <code>Batch</code> and matches the shell's assetKind (Model → Type, Item → Instance, Batch → Batch).</p>
-    <span class="chip">VAL-granularity*</span></li>
-  <li data-n="5"><h3>contentSpecificationIds<span class="tag">optional</span></h3>
-    <p>If present: a list of <code>xs:string</code> Properties, not order-relevant, with at least one non-empty item and correct semanticIds.</p>
-    <span class="chip">OPT-*</span><span class="chip">SML-*</span><span class="chip">SEM-item-*</span></li>
-  <li data-n="6"><h3>lastUpdate</h3>
-    <p>A well-formed date-time with a timezone, and that timezone is UTC (<code>Z</code> or <code>+00:00</code>).</p>
-    <span class="chip">DT-lastUpdate-*</span></li>
-  <li data-n="7" class="extra"><h3>Technical data<span class="tag demo">demo only</span></h3>
-    <p>Only runs with "also require technical data"; not part of IDTA 02099-1. Needs a submodel whose idShort contains "technical", with at least 3 elements that carry a value, referenced by a shell.</p>
-    <span class="chip">TECH-*</span></li>
-</ol>
+  <h2>Request flow</h2>
+  <p class="muted">
+    Each column is one party. Read the numbers top to bottom; arrows show a request going to the next party and the
+    answer coming back.
+  </p>
+  <div class="lanes">
+    <div class="lane" data-who="Browser">
+      <b>Browser</b><small>Client. Loads the file, shows the result, verifies the signature.</small>
+    </div>
+    <div class="lane" data-who="nginx">
+      <b>nginx</b><small>Reverse proxy. Serves the page, forwards to OPA and to the issuer.</small>
+    </div>
+    <div class="lane" data-who="OPA">
+      <b>OPA</b><small>Policy engine. Evaluates the rules, holds the private key, signs the credential.</small>
+    </div>
+    <div class="lane" data-who="Issuer">
+      <b>Issuer</b
+      ><small
+        >The configured issuer, by default <code>validate.posedio.com</code>. Publishes the public key in its DID
+        document.</small
+      >
+    </div>
 
-<h2>Verdict</h2>
-<div class="legend">
-  <div class="PASS"><b>PASS</b><span>Rule satisfied.</span></div>
-  <div class="FAIL"><b>FAIL</b><span>Rule violated. Any FAIL makes the file <strong>Not compliant</strong>.</span></div>
-  <div class="SKIP"><b>SKIP</b><span>Optional attribute missing. Does not affect the verdict.</span></div>
-</div>
-<p class="muted">"Compliant" is OPA's <code>allow</code> field: <code>true</code> when no rule returned FAIL.</p>
+    <div class="step" data-who="Browser" data-n="1" style="--c: 1; --r: 2">
+      <b>Load a file</b><small>Paste AAS JSON or pick a sample</small>
+    </div>
+    <div class="step" data-who="Browser" data-n="2" style="--c: 1; --r: 3">
+      <b>Parse</b><small>Check that it is valid JSON</small>
+    </div>
+    <div class="step go" data-who="Browser" data-n="3" style="--c: 1; --r: 4">
+      <b>Send the file</b
+      ><small
+        ><code>POST /v1/data/dpp/report</code>, or <code>report_tech</code> with "also require technical data"</small
+      >
+    </div>
+    <div class="step go" data-who="nginx" data-n="4" style="--c: 2; --r: 4">
+      <b>Forward</b><small>Only these two paths reach OPA</small>
+    </div>
+    <div class="step" data-who="OPA" data-n="5" style="--c: 3; --r: 4">
+      <b>Evaluate</b><small>Run every rule group below; each result is tagged with its group</small>
+    </div>
+    <div class="step" data-who="OPA" data-n="6" style="--c: 3; --r: 5">
+      <b>Issue credential</b
+      ><small
+        >Only if no rule failed: build the credential and sign it as a JWT (PS256) with the issuer's private key</small
+      >
+    </div>
+    <div class="step sub back" data-who="OPA" style="--c: 3; --r: 6">
+      <b>Answer</b
+      ><small
+        ><code>allow</code>, <code>results</code> with their <code>group</code>, and <code>vc</code> +
+        <code>vc_jwt</code> if compliant</small
+      >
+    </div>
+    <div class="step sub back" data-who="nginx" style="--c: 2; --r: 6">
+      <b>Pass back</b><small>Returns OPA's answer unchanged</small>
+    </div>
+    <div class="step" data-who="Browser" data-n="7" style="--c: 1; --r: 6">
+      <b>Show result</b><small>Verdict, credential and the checks by rule group</small>
+    </div>
+    <div class="step go" data-who="Browser" data-n="8" style="--c: 1; --r: 7">
+      <b>Verify signature</b><small>Fetch the issuer's public key and check the JWT in the browser</small>
+    </div>
+    <div class="step sub go" data-who="nginx" style="--c: 2; --r: 7">
+      <b>Proxy</b><small>Passes <a href="did.json" target="_blank" rel="noopener">/did.json</a> on to the issuer</small>
+    </div>
+    <div class="wire" style="--c: 3; --r: 7"></div>
+    <div class="step sub" data-who="Issuer" style="--c: 4; --r: 7">
+      <b>did.json</b><small>Public key and whether it is revoked</small>
+    </div>
+  </div>
+
+  <h2>Compliance credential</h2>
+  <div class="cred">
+    <div>
+      <p>
+        A compliant file gets a verifiable credential: a signed statement that this file passed the check. A file with
+        any FAIL gets none.
+      </p>
+      <p>
+        Whoever receives it can verify it against the issuer's public key, without running the check again and without
+        trusting this server.
+      </p>
+      <p class="muted">
+        Changing a single character of the JWT makes verification fail, as does a key that is revoked in or missing from
+        the issuer's DID document. The private key is read from the server's environment and never reaches the browser;
+        without it the credential is returned unsigned.
+      </p>
+    </div>
+    <dl>
+      <dt>Shape</dt>
+      <dd>
+        Gaia-X
+        <a
+          href="https://docs.gaia-x.eu/ontology/development/classes/ComplianceCredential/"
+          target="_blank"
+          rel="noopener"
+          >ComplianceCredential</a
+        >; returned as <code>vc</code> (JSON) and <code>vc_jwt</code> (signed)
+      </dd>
+      <dt>Issuer</dt>
+      <dd>
+        <code>did:web:validate.posedio.com</code>, key <code>#2026-v3</code> by default; set with
+        <code>VC_DID_HOST</code> and <code>VC_KEY_ID</code> in <code>.env</code>
+      </dd>
+      <dt>Subject</dt>
+      <dd>The id of the DppMetadata submodel that was checked</dd>
+      <dt>Rules</dt>
+      <dd>IDTA-02099-1 v1.0, with the list of checks that passed</dd>
+      <dt>Input digest</dt>
+      <dd>SHA-256 of the checked input, so the credential is tied to this exact content</dd>
+      <dt>Validity</dt>
+      <dd>90 days from the moment of the check, but never beyond the signing key's expiry</dd>
+    </dl>
+  </div>
+
+  <h2>Rule groups</h2>
+  <p class="muted">
+    All groups run on every request, and one failing rule does not stop the others. Rules about an attribute only run
+    when that attribute is present. The policy returns the group with every result, so the Check page shows the checks
+    under these same names and in this order.
+  </p>
+  <ol class="groups">
+    <li data-n="0">
+      <h3>AAS structure</h3>
+      <p>
+        The root collections are arrays, every shell has an id and assetInformation, every submodel has an id, all
+        submodel references resolve, and a shell references DppMetadata.
+      </p>
+      <span class="chip">AAS-*</span>
+    </li>
+    <li data-n="1">
+      <h3>DppMetadata submodel</h3>
+      <p>
+        Exactly one submodel with idShort <code>DppMetadata</code>, semanticId <code>…/cds/dppMetadata/1</code>, and no
+        duplicate idShorts inside it.
+      </p>
+      <span class="chip">STRUCT-submodel</span><span class="chip">SEM-submodel</span><span class="chip">DUP-*</span>
+    </li>
+    <li data-n="2">
+      <h3>Presence</h3>
+      <p>The 7 mandatory attributes are present with a non-blank value. <code>facilityId</code> is optional.</p>
+      <span class="chip">MAND-*</span><span class="chip">VAL-*-nonempty</span>
+    </li>
+    <li data-n="3">
+      <h3>Types and semanticIds</h3>
+      <p>
+        Each attribute is a <code>Property</code> with the expected valueType and semanticId
+        <code>…/cds/&lt;name&gt;/1</code>. <code>granularity</code> and <code>lastUpdate</code> also need their
+        supplementalSemanticIds.
+      </p>
+      <span class="chip">TYPE-*</span><span class="chip">SEM-*</span>
+    </li>
+    <li data-n="4">
+      <h3>Granularity</h3>
+      <p>
+        The value is <code>Model</code>, <code>Item</code> or <code>Batch</code> and matches the shell's assetKind
+        (Model → Type, Item → Instance, Batch → Batch).
+      </p>
+      <span class="chip">VAL-granularity*</span>
+    </li>
+    <li data-n="5">
+      <h3>contentSpecificationIds<span class="tag">optional</span></h3>
+      <p>
+        If present: a list of <code>xs:string</code> Properties, not order-relevant, with at least one non-empty item
+        and correct semanticIds.
+      </p>
+      <span class="chip">OPT-*</span><span class="chip">SML-*</span><span class="chip">SEM-item-*</span>
+    </li>
+    <li data-n="6">
+      <h3>lastUpdate</h3>
+      <p>A well-formed date-time with a timezone, and that timezone is UTC (<code>Z</code> or <code>+00:00</code>).</p>
+      <span class="chip">DT-lastUpdate-*</span>
+    </li>
+    <li data-n="7" class="extra">
+      <h3>Technical data<span class="tag demo">demo only</span></h3>
+      <p>
+        Only runs with "also require technical data"; not part of IDTA 02099-1. Needs a submodel whose idShort contains
+        "technical", with at least 3 elements that carry a value, referenced by a shell.
+      </p>
+      <span class="chip">TECH-*</span>
+    </li>
+  </ol>
+
+  <h2>Verdict</h2>
+  <div class="legend">
+    <div class="PASS"><b>PASS</b><span>Rule satisfied.</span></div>
+    <div class="FAIL">
+      <b>FAIL</b><span>Rule violated. Any FAIL makes the file <strong>Not compliant</strong>.</span>
+    </div>
+    <div class="SKIP"><b>SKIP</b><span>Optional attribute missing. Does not affect the verdict.</span></div>
+  </div>
+  <p class="muted">"Compliant" is OPA's <code>allow</code> field: <code>true</code> when no rule returned FAIL.</p>
 </main>
