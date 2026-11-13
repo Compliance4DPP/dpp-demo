@@ -1,26 +1,39 @@
+{{- /*
+  Pontus-X offering (PontusxOffering of the Ecosystems Gateway). The download is
+  TEMPLATE_DPP_FILE_URL, by default the demonstrator's one shared sample DPP (tool_dpp.json on
+  the provider's static files) for every offering. The description is
+  description.md; the service offering credential URL is where the presentation of the
+  service-offering credential and the participant credentials is to be hosted.
+*/ -}}
+{{- $product := prop .DPP "ManufacturerProductDesignation" | default (prop .DPP "productDesignation") | default .ID -}}
+{{- $so := index .Credentials "service-offering" -}}
 {
   "metadata": {
     "type": "dataset",
-    "name": {{json (printf "DPP %s" (prop .DPP "ManufacturerProductDesignation" | default .ID))}},
-    "description": {{json (printf "Digital Product Passport (AAS, IDTA 02099-1) of %s" .ID)}},
-    "author": {{json (env "TEMPLATE_AUTHOR" | default "DPP demo")}},
-    {{- with env "TEMPLATE_PROVIDED_BY"}}
-    "providedBy": {{json .}},
-    {{- end}}
+    "name": {{json (printf "DPP %s" $product)}},
+    "displayTitle": {{json (printf "Digital Product Passport: %s" $product)}},
+    "description": {{json .Description}},
+    "author": {{json (env "TEMPLATE_AUTHOR" | default (.Provider.Name | default "COMPLIANCE4DPP"))}},
+    "providedBy": {{json .Provider.CredentialURL}},
     "license": "CC-BY-4.0",
-    "tags": ["dpp", "aas", "idta-02099"],
-    "language": "en"
+    "tags": ["dpp", "aas", "idta-02099", "cutting-tool", "c4dpp", "gaia-x"],
+    "language": "en",
+    "links": {
+      "COMPLIANCE4DPP": "https://www.compliance4dpp.eu/",
+      "Web demonstrator": "https://github.com/Compliance4DPP/dpp-demo"
+    }
   },
   "additionalInformation": {
     "termsAndConditions": true,
-    "gaiaX": {"serviceOfferingCredential": "https://example.org/.well-known/gx_digitalserviceoffering.jwt"}
+    "gaiaX": {"serviceOfferingCredential": {{json (printf "%s.jwt" $so.ID)}}}
   },
   "services": [
     {
       "name": "DPP download",
+      "description": "The Digital Product Passport as AAS JSON (IDTA 02099-1)",
       "type": "access",
       "pricing": {"pricingType": "FREE"},
-      "files": [{"url": "https://example.org/dpp/endmill-0001.json", "method": "GET"}]
+      "files": [{"url": {{json (env "TEMPLATE_DPP_FILE_URL" | default "https://credentials.ptw.maschinenbau.tu-darmstadt.de/static/tool_dpp.json")}}, "method": "GET"}]
     }
   ]
 }

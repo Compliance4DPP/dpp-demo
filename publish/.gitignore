@@ -1,3 +1,4 @@
-gateway.env
 signer/config.yaml
 signer/*.pem
+# hosted at TEMPLATE_IMAGE_BASE_URL (credentials.ptw.maschinenbau.tu-darmstadt.de/static/)
+templates/default/images/

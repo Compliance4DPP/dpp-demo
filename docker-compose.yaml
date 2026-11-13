@@ -1,47 +1,67 @@
+# Configuration: the root .env is the only env file (see .env.example). No service loads it as a
+# whole; each gets only the variables it reads, listed under `environment`. A key without a value
+# is passed through from .env unchanged and stays unset in the container when .env does not set
+# it, so defaults stay in the services. Fixed wiring is set here directly.
 services:
   opa:
     image: openpolicyagent/opa:1.22.0
     command: ["run", "--server", "--addr=0.0.0.0:8181", "/policy"]
     volumes: ["./policy:/policy:ro"]
-    env_file: [{path: .env, required: false}]
+    environment:
+      VC_KEY:
+      VC_DID_HOST:
+      VC_KEY_ID:
+      VC_KEY_EXPIRES:
   web:
     image: nginx:1.31.8-alpine
     ports: ["127.0.0.1:8082:80"]
     volumes: ["./web:/usr/share/nginx/html:ro", "./samples:/samples:ro", "./nginx.conf:/etc/nginx/templates/default.conf.template:ro"]
-    environment:  # only the host, never the whole .env: the private key stays out of this container
+    environment:  # envsubst in nginx.conf needs a value; the default matches policy/vc.rego
       VC_DID_HOST: ${VC_DID_HOST:-validate.posedio.com}
     depends_on: [opa]
-  # Publishing stack: docker compose --profile publish up (see publish/README.md)
+
+  # Publishing stack: docker compose --profile publish up (see publish/README.md). The Ecosystems
+  # Gateway is hosted elsewhere (GATEWAY_URL); only the publish service and the signer run here.
   dataswitch:
     profiles: [publish]
     build:
       context: ./publish
-    ports: ["127.0.0.1:50051:50051"]
-    env_file: [{path: ./publish/.env, required: false}]
+    ports: ["127.0.0.1:8083:8080"]
     environment:
-      SIGNER_ADDR: signer:50050
-      GATEWAY_ADDR: gateway:5002
+      SIGNER_URL: http://signer:8091
       DPP_DIR: /data/dpps
       TEMPLATE_DIR: /data/templates
+      ISSUER_DID:
+      SIGNER_AUTHORIZATION:
+      GATEWAY_URL:
+      GATEWAY_TOKEN:
+      PUBLISH_TIMEOUT:
+      MAX_REQUEST_BYTES:
+      PROVIDER_CREDENTIAL_URL:
+      # read with {{env "TEMPLATE_..."}}; a new one needs a line here
+      TEMPLATE_AUTHOR:
+      TEMPLATE_TERMS_URL:
+      TEMPLATE_TERMS_SHA256:
+      TEMPLATE_SERVICE_OFFERING_URL:
+      TEMPLATE_DPP_FILE_URL:
+      TEMPLATE_IMAGE_BASE_URL:
+      TEMPLATE_CONTACT_URL:
+      TEMPLATE_CONTACT_EMAIL:
+      TEMPLATE_DATA_PROTECTION_URL:
+      TEMPLATE_DATA_PORTABILITY_URL:
+      TEMPLATE_PRICING_URL:
+      TEMPLATE_SERVICE_VERSION:
     volumes: ["./samples:/data/dpps:ro", "./publish/templates:/data/templates:ro"]
-    depends_on: [signer, gateway]
+    depends_on: [signer]
   signer:
     profiles: [publish]
     image: registry.dumss.net/theia/gaia-x-signer:v0.3.2
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
+    environment:  # override gxCompliance DID and verificationMethod of config.yaml; empty keeps the file's
+      GXCOMPLIANCE_DID: ${ISSUER_DID:-}
+      GXCOMPLIANCE_VERIFICATIONMETHOD: ${ISSUER_KEY_ID:+${ISSUER_DID}#${ISSUER_KEY_ID}}
     volumes:
       - ./publish/signer/config.yaml:/usr/server/config.yaml:ro
       - ./publish/signer/key.pem:/usr/server/key.pem:ro
-  gateway:
-    profiles: [publish]
-    image: ghcr.io/ptw-tud/ecosystems-gateway:dev-nautilus_v2
-    env_file: [{path: ./publish/gateway.env, required: false}]
-    environment:
-      REDIS_ADDRESS: redis:6379
-      GRPC_BIND: 0.0.0.0:5002
-    depends_on: [redis]
-  redis:
-    profiles: [publish]
-    image: redis:7.4-alpine

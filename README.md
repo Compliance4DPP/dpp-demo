@@ -16,7 +16,7 @@ That is enough to run checks; credentials are returned unsigned. Click a sample,
 
 ### Signed credentials
 
-1. Copy the template: `cp .env.example .env` (`.env` is gitignored; never commit the key).
+1. Copy the template: `cp .env.example .env` (`.env` is gitignored; never commit the key). It is the project's only env file; `docker-compose.yaml` gives each container just the variables it reads.
 2. In `.env`, replace `PASTE_KEY_HERE` with the RSA private key as PEM, line breaks included, inside the quotes.
 3. Recreate the containers so the key is loaded: `docker compose up -d --force-recreate`
 
@@ -24,11 +24,16 @@ The issuer defaults to `did:web:validate.posedio.com`, key `2026-v3`. The key mu
 
 Any change to `.env` or to `policy/` needs the recreate command again; changes in `web/` only need a page reload.
 
+### Publishing on Pontus-X
+
+After a passing check, **Publish** sends the DPP and its compliance credential to the publishing stack, which publishes the DPP as a Pontus-X offering with a Gaia-X service offering of the provider. It needs the stack running (`docker compose --profile publish up --build`) and its settings in `.env`; see [publish/README.md](publish/README.md).
+
 ### Development
 
 ```bash
-make test        # policy tests
-make fmt         # format policy/ and web/ before committing; CI checks it
+make test          # policy tests
+make test_publish  # publish service tests (go vet + go test), see publish/README.md
+make fmt           # format policy/ and web/ before committing; CI checks it
 ```
 
 ## Notes

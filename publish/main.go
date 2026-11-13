@@ -1,30 +1,20 @@
-// Command publish serves the dppdemo.publish.v1.Publisher gRPC API: it signs the credentials of
-// a template with the gaia-x-signer and publishes the template's offering through the Ecosystems
-// Gateway.
+// Command publish serves an HTTP/JSON API that signs the credentials of a template with the
+// gaia-x-signer and publishes the template's offering through the Ecosystems Gateway, both
+// reached over their HTTP/JSON APIs.
 package main
 
 import (
 	"context"
-	"crypto/tls"
+	"errors"
 	"fmt"
 	"log/slog"
-	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 	"time"
-
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/health"
-	healthpb "google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/reflection"
-
-	"dpp-demo/publish/gen/gatewayv3"
-	"dpp-demo/publish/gen/publishv1"
-	"dpp-demo/publish/gen/signerpb"
 )
 
 func main() {
@@ -41,83 +31,74 @@ func run() error {
 		return err
 	}
 
-	signerConn, err := dial(cfg.SignerAddr, cfg.SignerTLS)
-	if err != nil {
-		return fmt.Errorf("signer: %w", err)
-	}
-	defer signerConn.Close()
-	gatewayConn, err := dial(cfg.GatewayAddr, cfg.GatewayTLS)
-	if err != nil {
-		return fmt.Errorf("gateway: %w", err)
-	}
-	defer gatewayConn.Close()
-
-	svc := &publisher{
+	p := &publisher{
 		dppDir:      cfg.DPPDir,
 		templateDir: cfg.TemplateDir,
 		issuer:      cfg.IssuerDID,
-		signerAuth:  cfg.SignerAuthorization,
+		providerURL: cfg.ProviderCredentialURL,
 		timeout:     cfg.PublishTimeout,
-		signer:      signerpb.NewSignerClient(signerConn),
-		gateway:     gatewayv3.NewEcosystemsgatewayClient(gatewayConn),
+		maxBody:     cfg.MaxRequestBytes,
+		signer:      &apiClient{name: "signer", base: cfg.SignerURL, auth: cfg.SignerAuthorization},
+		gateway:     &apiClient{name: "gateway", base: cfg.GatewayURL, auth: bearer(cfg.GatewayToken)},
+	}
+	srv := &http.Server{
+		Addr:              cfg.Addr,
+		Handler:           p.routes(),
+		ReadHeaderTimeout: 10 * time.Second,
 	}
 
-	srv := grpc.NewServer(grpc.MaxRecvMsgSize(cfg.MaxMessageBytes))
-	publishv1.RegisterPublisherServer(srv, svc)
-	healthpb.RegisterHealthServer(srv, health.NewServer())
-	reflection.Register(srv)
-
-	lis, err := net.Listen("tcp", cfg.Addr)
-	if err != nil {
-		return err
-	}
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 	go func() {
 		<-ctx.Done()
 		slog.Info("shutting down")
-		srv.GracefulStop()
+		shutdown, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutdown)
 	}()
-	slog.Info("listening", "addr", cfg.Addr, "signer", cfg.SignerAddr, "gateway", cfg.GatewayAddr)
-	return srv.Serve(lis)
+	slog.Info("listening", "addr", cfg.Addr, "signer", cfg.SignerURL, "gateway", cfg.GatewayURL)
+	if err := srv.ListenAndServe(); !errors.Is(err, http.ErrServerClosed) {
+		return err
+	}
+	return nil
 }
 
-func dial(addr string, useTLS bool) (*grpc.ClientConn, error) {
-	creds := insecure.NewCredentials()
-	if useTLS {
-		creds = credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS12})
+func bearer(token string) string {
+	if token == "" {
+		return ""
 	}
-	return grpc.NewClient(addr, grpc.WithTransportCredentials(creds))
+	return "Bearer " + token
 }
 
 type config struct {
-	Addr                string
-	DPPDir              string
-	TemplateDir         string
-	IssuerDID           string
-	MaxMessageBytes     int
-	PublishTimeout      time.Duration
-	SignerAddr          string
-	SignerTLS           bool
-	SignerAuthorization string
-	GatewayAddr         string
-	GatewayTLS          bool
+	Addr        string
+	DPPDir      string
+	TemplateDir string
+	IssuerDID   string
+	// ProviderCredentialURL is the provider's Gaia-X participant credential
+	ProviderCredentialURL string
+	MaxRequestBytes       int64
+	PublishTimeout        time.Duration
+	SignerURL             string
+	SignerAuthorization   string
+	GatewayURL            string
+	GatewayToken          string
 }
 
 func loadConfig() (config, error) {
 	e := envReader{}
 	c := config{
-		Addr:                e.str("GRPC_ADDR", ":50051"),
-		DPPDir:              e.str("DPP_DIR", "/data/dpps"),
-		TemplateDir:         e.str("TEMPLATE_DIR", "/data/templates"),
-		IssuerDID:           e.str("ISSUER_DID", ""),
-		MaxMessageBytes:     e.int("MAX_MESSAGE_BYTES", 16<<20),
-		PublishTimeout:      e.duration("PUBLISH_TIMEOUT", 10*time.Minute),
-		SignerAddr:          e.required("SIGNER_ADDR"),
-		SignerTLS:           e.bool("SIGNER_TLS", false),
-		SignerAuthorization: e.str("SIGNER_AUTHORIZATION", ""),
-		GatewayAddr:         e.required("GATEWAY_ADDR"),
-		GatewayTLS:          e.bool("GATEWAY_TLS", false),
+		Addr:                  e.str("HTTP_ADDR", ":8080"),
+		DPPDir:                e.str("DPP_DIR", "/data/dpps"),
+		TemplateDir:           e.str("TEMPLATE_DIR", "/data/templates"),
+		IssuerDID:             e.str("ISSUER_DID", ""),
+		ProviderCredentialURL: e.str("PROVIDER_CREDENTIAL_URL", ""),
+		MaxRequestBytes:       int64(e.int("MAX_REQUEST_BYTES", 16<<20)),
+		PublishTimeout:        e.duration("PUBLISH_TIMEOUT", 10*time.Minute),
+		SignerURL:             e.url("SIGNER_URL"),
+		SignerAuthorization:   e.str("SIGNER_AUTHORIZATION", ""),
+		GatewayURL:            e.url("GATEWAY_URL"),
+		GatewayToken:          e.str("GATEWAY_TOKEN", ""),
 	}
 	if e.err != nil {
 		return config{}, e.err
@@ -141,24 +122,19 @@ func (e *envReader) str(key, def string) string {
 	return def
 }
 
-func (e *envReader) required(key string) string {
+// url reads a required http(s) base URL.
+func (e *envReader) url(key string) string {
 	v := os.Getenv(key)
-	if v == "" {
-		e.fail(key, fmt.Errorf("required"))
+	u, err := url.Parse(v)
+	switch {
+	case v == "":
+		e.fail(key, errors.New("required"))
+	case err != nil:
+		e.fail(key, err)
+	case (u.Scheme != "http" && u.Scheme != "https") || u.Host == "":
+		e.fail(key, errors.New("want an http(s) URL"))
 	}
 	return v
-}
-
-func (e *envReader) bool(key string, def bool) bool {
-	v := e.str(key, "")
-	if v == "" {
-		return def
-	}
-	b, err := strconv.ParseBool(v)
-	if err != nil {
-		e.fail(key, err)
-	}
-	return b
 }
 
 func (e *envReader) int(key string, def int) int {
