@@ -5,11 +5,14 @@ PRETTIER = npx --yes prettier@3.3.3
 GO = docker run --rm -v $(CURDIR):/w -w /w/publish -e GOFLAGS=-buildvcs=false \
 	-v dpp-demo-gocache:/root/.cache/go-build golang:1.26-alpine
 
-.PHONY: test test_publish image_publish fmt fmt-check
+.PHONY: test test-js test_publish image_publish fmt fmt-check
 
-# policy tests
-test:
+# policy tests and the signature check tests (needs Node 22+)
+test: test-js
 	$(OPA) test /w/policy
+
+test-js:
+	node --test 'test/*.test.mjs'
 
 # publish service: go vet + go test
 test_publish:
@@ -19,14 +22,14 @@ test_publish:
 image_publish:
 	docker build -t dpp-demo-publish publish
 
-# formatting: opa fmt for policy/, Prettier for web/, gofmt for publish/ (its templates are Go
-# templates, which JSON and Markdown formatters would break, so they are left as written)
+# formatting: opa fmt for policy/, Prettier for web/ and test/, gofmt for publish/ (its templates
+# are Go templates, which JSON and Markdown formatters would break, so they are left as written)
 fmt:
 	$(OPA) fmt -w /w/policy
-	$(PRETTIER) --write web
+	$(PRETTIER) --write web test
 	$(GO) gofmt -w .
 
 fmt-check:
 	$(OPA) fmt --fail -l /w/policy
-	$(PRETTIER) --check web
+	$(PRETTIER) --check web test
 	$(GO) sh -c 'files=$$(gofmt -l .); [ -z "$$files" ] || { echo "gofmt needed: $$files"; exit 1; }'

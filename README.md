@@ -31,9 +31,9 @@ After a passing check, **Publish** sends the DPP and its compliance credential t
 ### Development
 
 ```bash
-make test          # policy tests
+make test          # policy tests and signature check tests (needs Node 22+)
 make test_publish  # publish service tests (go vet + go test), see publish/README.md
-make fmt           # format policy/ and web/ before committing; CI checks it
+make fmt           # format policy/, web/, test/ and publish/ before committing; CI checks it
 ```
 
 ## Notes

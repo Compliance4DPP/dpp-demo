@@ -14,7 +14,7 @@ jobs:
       - name: Format (opa fmt for policy, Prettier for web, gofmt for publish)
         run: make fmt-check
       - name: Frontend script parses
-        run: node --check web/app.js
+        run: node --check web/app.js && node --check web/verify.js
       - name: Compose file is valid
         run: docker compose config -q
 
@@ -24,7 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Policy tests (opa test)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Policy tests (opa test) and signature check tests (node --test)
         run: make test
       - name: Publish service tests (go vet + go test)
         run: make test_publish

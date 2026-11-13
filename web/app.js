@@ -1,3 +1,5 @@
+import { verifyJwt } from "./verify.js";
+
 const $ = (id) => document.getElementById(id);
 
 document.querySelectorAll("button[data-s]").forEach((b) => {
@@ -179,8 +181,6 @@ function showVc(r) {
 
 $("copy").onclick = () => navigator.clipboard.writeText($("jwt").value);
 
-const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
-
 // did.json comes through nginx: the issuer sends no CORS header
 $("verify").onclick = async () => {
   const out = (ok, msg) => {
@@ -189,36 +189,13 @@ $("verify").onclick = async () => {
   };
   $("vcverify").textContent = "Checking\u2026";
   await new Promise((r) => setTimeout(r, 300)); // long enough to see that a click re-checks
+  let doc;
   try {
-    const [h, p, sig] = $("jwt").value.trim().split(".");
-    const { kid } = JSON.parse(new TextDecoder().decode(b64u(h)));
     const res = await fetch("did.json");
     if (!res.ok) return out(false, `the issuer's did.json could not be fetched (HTTP ${res.status})`);
-    const doc = await res.json();
-    const vm = doc.verificationMethod.find((m) => m.id === kid);
-    if (!vm) return out(false, `key ${kid} is not in the issuer's DID document`);
-    if (vm.revoked) return out(false, `key ${kid} was revoked on ${vm.revoked}`);
-    if (new Date(vm.expires) < new Date()) return out(false, `key ${kid} expired on ${vm.expires}`);
-    const { kty, n, e } = vm.publicKeyJwk;
-    const key = await crypto.subtle.importKey("jwk", { kty, n, e }, { name: "RSA-PSS", hash: "SHA-256" }, false, [
-      "verify",
-    ]);
-    const ok = await crypto.subtle.verify(
-      { name: "RSA-PSS", saltLength: 32 },
-      key,
-      b64u(sig),
-      new TextEncoder().encode(`${h}.${p}`),
-    );
-    const { validUntil } = ok ? JSON.parse(new TextDecoder().decode(b64u(p))) : {};
-    if (new Date(validUntil) < new Date())
-      return out(false, `the signature matches, but the credential expired on ${validUntil}`);
-    out(
-      ok,
-      ok
-        ? `signed by ${kid}, public key fetched from the issuer's did.json`
-        : `signature does not match the content (key ${kid})`,
-    );
-  } catch (err) {
-    out(false, "not a readable JWT (" + err.message + ")");
+    doc = await res.json();
+  } catch (e) {
+    return out(false, "the issuer's did.json could not be fetched (" + e.message + ")");
   }
+  out(...(await verifyJwt($("jwt").value, doc)));
 };
