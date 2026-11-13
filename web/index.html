@@ -40,6 +40,7 @@
         <button data-s="invalid_dpp">invalid</button>
         <button data-s="no_timezone_dpp">no timezone</button>
         <button data-s="valid_tech_desc_dpp">with technical data</button>
+        <button data-s="tool_dpp">tool dpp</button>
       </div>
       <textarea id="input" spellcheck="false" aria-label="AAS JSON"></textarea>
       <p>
@@ -72,6 +73,15 @@
           <summary>Decoded credential</summary>
           <pre id="vc"></pre>
         </details>
+        <div id="pub">
+          <h3>Publish on Pontus-X</h3>
+          <p class="muted">
+            Sends this DPP and its compliance credential to the publish service (dataswitch): it signs a Gaia-X service
+            offering, combines it with the provider's participant credential and publishes the offering on Pontus-X.
+          </p>
+          <p><button id="publish" class="primary">Publish DPP and credential</button></p>
+          <div id="pubresult" role="status"></div>
+        </div>
       </section>
       <div id="results"></div>
       <details>
