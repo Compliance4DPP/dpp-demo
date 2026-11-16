@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Start the demo
-        run: docker compose up -d --wait
+        run: docker compose up -d --wait web opa
       - name: Page is served and a valid sample is compliant
         run: |
           curl -fsS --retry 10 --retry-delay 1 --retry-all-errors http://localhost:8082/ > /dev/null
