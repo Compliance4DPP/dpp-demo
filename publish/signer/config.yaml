@@ -20,4 +20,4 @@ gxCompliance:
   complianceURL: "https://compliance.lab.gaia-x.eu/development/api/credential-offers"
   version: loire
   privateKeyPath: ./key.pem
-  signatureAlgorithm: ES256
+  signatureAlgorithm: RS256 # must match key.pem: RS256 for RSA (PTW's X509-JWK2020), ES256 for EC P-256
