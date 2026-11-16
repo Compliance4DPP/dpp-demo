@@ -1,0 +1,23 @@
+# gaia-x-signer config (copy to publish/signer/config.yaml, put the signing key next to it as
+# key.pem). All options: https://git.dumss.net/theia/gaia-x-signer/-/blob/main/config.yaml
+sdbs:
+  uid: https://signer.sdbs.dumss.net/v1
+  withHealthServer: true
+  dependencyCheckInterval: 6000 #ms
+  tcpConfig: # gRPC, only reachable inside the container (the HTTP gateway below calls it)
+    address: 127.0.0.1:50050
+  gateway: # HTTP/JSON API, used by the publish service: POST /sdbs/v1/signVC
+    host: 0.0.0.0:8091
+    withOpenAPI: false
+authServer:
+  basicIdentityProvider:
+    basicAuths:
+      - base64: ZGVtbzp0ZXN0 # demo:test, change it; SIGNER_AUTHORIZATION in the root .env must match
+gxCompliance:
+  DID: "did:web:example.org" # overridden by ISSUER_DID of the root .env (compose: GXCOMPLIANCE_DID)
+  verificationMethod: "did:web:example.org#key-1" # overridden by ISSUER_DID#ISSUER_KEY_ID of the root .env
+  notaryURL: "https://www.delta-dao.com/notary/v2/"
+  complianceURL: "https://compliance.lab.gaia-x.eu/development/api/credential-offers"
+  version: loire
+  privateKeyPath: ./key.pem
+  signatureAlgorithm: ES256

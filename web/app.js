@@ -14,9 +14,14 @@ $("tech").onchange = () => {
 };
 
 let runs = 0;
+// the DPP and compliance credential of the last passing check, for publishing
+let checked = null;
+// where published offerings are shown
+const PORTAL = "https://portal.compliance4dpp.eu";
 
 async function check() {
   const run = ++runs;
+  checked = null;
   $("vcbox").hidden = true;
   $("results").innerHTML = "";
   $("raw").textContent = "";
@@ -56,7 +61,54 @@ async function check() {
     : `<span class="FAIL">Not compliant</span> (${r.failed} failed)`;
   showResults(r.results, r.groups);
   showVc(r);
+  // only a passing check (which issued a credential) can be published
+  checked = r.allow && r.vc ? { dpp: input, credential: r.vc_jwt || r.vc } : null;
+  $("pub").hidden = !checked;
+  $("publish").disabled = false;
+  $("pubresult").textContent = "";
 }
+
+// Sends the checked DPP and its compliance credential (the JWT if signed) to the publish
+// service, which nginx forwards to the dataswitch container of the publishing stack.
+$("publish").onclick = async () => {
+  if (!checked) return;
+  const sent = checked;
+  const out = (html) => {
+    if (checked === sent) $("pubresult").innerHTML = html;
+  };
+  $("publish").disabled = true;
+  out(
+    '<span class="muted">Publishing… the gateway waits until Pontus-X has indexed the offering, which can take a few minutes.</span>',
+  );
+  try {
+    const res = await fetch("/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ template: "default", dpp: sent.dpp, compliance_credential: sent.credential }),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      const why =
+        res.status === 502 && !body.error
+          ? "the publish service is not running (start it with docker compose --profile publish up)"
+          : body.error || "HTTP " + res.status;
+      return out(`<span class="FAIL">Not published</span>: ${esc(why)}`);
+    }
+    // each offering's DID, linked to its page in the COMPLIANCE4DPP portal (only well-formed DIDs get a link)
+    const links = (body.offering_ids || [])
+      .map((id) =>
+        /^did:[a-z0-9]+:[A-Za-z0-9._-]+$/.test(id)
+          ? `<code>${esc(id)}</code> <a href="${PORTAL}/asset/${id}" target="_blank" rel="noopener">open in the COMPLIANCE4DPP portal</a>`
+          : `<code>${esc(id)}</code>`,
+      )
+      .join("<br />");
+    out(`<p><span class="PASS">Published</span>: ${links || "no offering id returned"}</p>`);
+  } catch (e) {
+    out(`<span class="FAIL">Not published</span>: the publish service could not be reached (${esc(e.message)})`);
+  } finally {
+    if (checked === sent) $("publish").disabled = false;
+  }
+};
 
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
 

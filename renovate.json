@@ -15,6 +15,13 @@
       "managerFilePatterns": ["/^Makefile$/"],
       "matchStrings": ["(?<depName>prettier)@(?<currentValue>\\S+)"],
       "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "description": "Go image pinned in the Makefile (publish service tests and gofmt)",
+      "managerFilePatterns": ["/^Makefile$/"],
+      "matchStrings": ["(?<depName>golang):(?<currentValue>\\S+)"],
+      "datasourceTemplate": "docker"
     }
   ],
   "packageRules": [
@@ -23,6 +30,12 @@
       "matchDepNames": ["openpolicyagent/opa"],
       "matchUpdateTypes": ["major"],
       "groupName": "OPA"
+    },
+    {
+      "description": "A major Go bump in the Makefile (tests, gofmt) and publish/Dockerfile (image) must move together",
+      "matchDepNames": ["golang"],
+      "matchUpdateTypes": ["major"],
+      "groupName": "Go"
     }
   ]
 }

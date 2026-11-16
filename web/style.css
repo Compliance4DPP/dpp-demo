@@ -247,6 +247,24 @@ dd {
 #vcverify .muted {
   font-weight: 400;
 }
+#pub {
+  border-top: 1px solid var(--line);
+  margin-top: 1rem;
+}
+#pub h3 {
+  margin: 0.75rem 0 0.25rem;
+}
+#pubresult .PASS,
+#pubresult .FAIL {
+  font-weight: 600;
+}
+#pubresult code {
+  overflow-wrap: anywhere;
+}
+button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
 [hidden] {
   display: none !important;
 }
