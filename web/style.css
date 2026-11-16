@@ -369,17 +369,20 @@ button:disabled {
   --edge: #b6d0ee;
   --ink: var(--accent);
 }
-[data-who="nginx"] {
+[data-who="nginx"],
+[data-who="Gateway"] {
   --tint: var(--panel);
   --edge: var(--line);
   --ink: var(--muted);
 }
-[data-who="OPA"] {
+[data-who="OPA"],
+[data-who="Publish"] {
   --tint: #e6f4ea;
   --edge: #a9d6b5;
   --ink: var(--pass);
 }
-[data-who="Issuer"] {
+[data-who="Issuer"],
+[data-who="Signer"] {
   --tint: var(--warn-tint);
   --edge: var(--warn-edge);
   --ink: var(--warn-ink);

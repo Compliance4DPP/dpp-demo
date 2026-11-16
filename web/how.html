@@ -211,4 +211,91 @@
     <div class="SKIP"><b>SKIP</b><span>Optional attribute missing. Does not affect the verdict.</span></div>
   </div>
   <p class="muted">"Compliant" is OPA's <code>allow</code> field: <code>true</code> when no rule returned FAIL.</p>
+  <h2>Publishing on Pontus-X</h2>
+  <p class="muted">
+    After a passing check, <b>Publish</b> sends the DPP and its compliance credential to the publish service
+    (<code>dataswitch</code>, started with <code>docker compose --profile publish up</code>). nginx forwards
+    <code>POST /publish</code> to it unchanged. All templates are rendered and checked before anything is signed or
+    published.
+  </p>
+  <div class="lanes">
+    <div class="lane" data-who="Browser">
+      <b>Browser</b><small>Client. Sends the checked file and its credential, shows the offering.</small>
+    </div>
+    <div class="lane" data-who="Publish">
+      <b>Publish service</b
+      ><small>Renders the template's credentials, description and offering, and drives the other two.</small>
+    </div>
+    <div class="lane" data-who="Signer">
+      <b>Signer</b
+      ><small
+        ><a href="https://git.dumss.net/theia/gaia-x-signer" target="_blank" rel="noopener">gaia-x-signer</a>. Holds
+        the provider's key and signs as <code>ISSUER_DID</code>.</small
+      >
+    </div>
+    <div class="lane" data-who="Gateway">
+      <b>Gateway</b
+      ><small
+        >Hosted
+        <a href="https://github.com/PTW-TUD/Ecosystems-Gateway/tree/nautilus_v2" target="_blank" rel="noopener"
+          >Ecosystems Gateway</a
+        >. Publishes the offering on Pontus-X.</small
+      >
+    </div>
+
+    <div class="step go" data-who="Browser" data-n="1" style="--c: 1; --r: 2">
+      <b>Publish</b
+      ><small><code>POST /publish</code> with the DPP and <code>vc_jwt</code>; only enabled after a passing check</small>
+    </div>
+    <div class="step" data-who="Publish" data-n="2" style="--c: 2; --r: 2">
+      <b>Load</b
+      ><small
+        >Fetch the provider's Gaia-X participant credential from <code>PROVIDER_CREDENTIAL_URL</code> and render the
+        <code>gx:DigitalServiceOffering</code></small
+      >
+    </div>
+    <div class="step go" data-who="Publish" data-n="3" style="--c: 2; --r: 3">
+      <b>Sign credentials</b><small>Each template credential, <code>POST /sdbs/v1/signVC</code></small>
+    </div>
+    <div class="step sub" data-who="Signer" style="--c: 3; --r: 3">
+      <b>Signed VC</b><small>One compact JWS per credential</small>
+    </div>
+    <div class="step go" data-who="Publish" data-n="4" style="--c: 2; --r: 4">
+      <b>Sign presentation</b
+      ><small
+        >The signed credentials plus the participant's, <code>POST /sdbs/v1/signVP</code>: the input of the Gaia-X
+        compliance service</small
+      >
+    </div>
+    <div class="step sub" data-who="Signer" style="--c: 3; --r: 4">
+      <b>Signed VP</b><small><code>vp+jwt</code></small>
+    </div>
+    <div class="step go" data-who="Publish" data-n="5" style="--c: 2; --r: 5">
+      <b>Create offering</b
+      ><small
+        >Description with the compliance credential and the service offering as code blocks;
+        <code>POST CreateOffering</code> with a bearer token</small
+      >
+    </div>
+    <div class="wire" style="--c: 3; --r: 5"></div>
+    <div class="step sub" data-who="Gateway" style="--c: 4; --r: 5">
+      <b>Pontus-X</b
+      ><small>Publishes the asset and waits until it is indexed (up to <code>PUBLISH_TIMEOUT</code>, 10 min)</small>
+    </div>
+    <div class="step sub back" data-who="Publish" style="--c: 2; --r: 6">
+      <b>Answer</b
+      ><small
+        ><code>offering_ids</code> (<code>did:ope:…</code>), <code>credentials</code>, <code>presentation</code> and
+        <code>presentation_url</code></small
+      >
+    </div>
+    <div class="step" data-who="Browser" data-n="6" style="--c: 1; --r: 6">
+      <b>Show result</b><small>Each offering id, linked to its page in the COMPLIANCE4DPP portal</small>
+    </div>
+  </div>
+  <p class="muted">
+    The publish service hosts nothing: the DPP file and the signed presentation are hosted by the provider at the URLs
+    the template links. It does not verify the compliance credential's signature; the offering's description shows it,
+    and anyone can verify it against its issuer's <code>did.json</code>. Publishing again creates a new offering.
+  </p>
 </main>
