@@ -20,10 +20,9 @@ services:
       VC_DID_HOST: ${VC_DID_HOST:-validate.posedio.com}
     depends_on: [opa]
 
-  # Publishing stack: docker compose --profile publish up (see publish/README.md). The Ecosystems
+  # Publishing stack (see publish/README.md), started with the rest. The Ecosystems
   # Gateway is hosted elsewhere (GATEWAY_URL); only the publish service and the signer run here.
   dataswitch:
-    profiles: [publish]
     build:
       context: ./publish
     ports: ["127.0.0.1:8083:8080"]
@@ -54,7 +53,6 @@ services:
     volumes: ["./samples:/data/dpps:ro", "./publish/templates:/data/templates:ro"]
     depends_on: [signer]
   signer:
-    profiles: [publish]
     image: registry.dumss.net/theia/gaia-x-signer:v0.3.2
     read_only: true
     cap_drop: [ALL]

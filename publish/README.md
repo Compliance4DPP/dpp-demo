@@ -144,7 +144,7 @@ passes each variable to the container that reads it.
 ## Run
 
 ```bash
-docker compose --profile publish up --build
+docker compose up --build
 ```
 
 Then check a DPP on the web page and press **Publish**. The signer runs from its published image

@@ -18,7 +18,7 @@ test-js:
 test_publish:
 	$(GO) sh -c 'go vet ./... && go test ./...'
 
-# publish service image on its own (docker compose --profile publish builds it as well)
+# publish service image on its own (docker compose up --build builds it as well)
 image_publish:
 	docker build -t dpp-demo-publish publish
 

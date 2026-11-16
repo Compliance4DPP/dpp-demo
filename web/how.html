@@ -214,7 +214,7 @@
   <h2>Publishing on Pontus-X</h2>
   <p class="muted">
     After a passing check, <b>Publish</b> sends the DPP and its compliance credential to the publish service
-    (<code>dataswitch</code>, started with <code>docker compose --profile publish up</code>). nginx forwards
+    (<code>dataswitch</code>, started with the rest by <code>docker compose up</code>). nginx forwards
     <code>POST /publish</code> to it unchanged. All templates are rendered and checked before anything is signed or
     published.
   </p>

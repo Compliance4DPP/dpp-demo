@@ -90,7 +90,7 @@ $("publish").onclick = async () => {
     if (!res.ok) {
       const why =
         res.status === 502 && !body.error
-          ? "the publish service is not running (start it with docker compose --profile publish up)"
+          ? "the publish service is not running (check docker compose ps)"
           : body.error || "HTTP " + res.status;
       return out(`<span class="FAIL">Not published</span>: ${esc(why)}`);
     }

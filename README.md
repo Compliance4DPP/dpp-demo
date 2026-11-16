@@ -2,6 +2,27 @@
 
 Checks a Digital Product Passport (AAS JSON) against [IDTA 02099-1 v1.0, §3.1](https://industrialdigitaltwin.org/en/wp-content/uploads/sites/2/2026/05/IDTA-02099-1_Submodel-Digital-Product-Passport-Part-1.pdf) with OPA. A file that passes gets a signed verifiable credential, which the page verifies in the browser.
 
+## Containers
+
+`docker compose up` starts all four containers: the check stack (web, opa) and the publishing stack (dataswitch, signer).
+
+```mermaid
+flowchart LR
+  browser([Browser]) -->|":8082"| web
+
+  subgraph check["check"]
+    web["web<br/>nginx"] -->|"POST /v1/data/dpp/report(_tech)"| opa["opa<br/>policy/ + VC signing"]
+  end
+
+  subgraph pub["publish"]
+    dataswitch["dataswitch<br/>publish/ (:8083)"] --> signer["signer<br/>gaia-x-signer"]
+  end
+
+  web -->|"POST /publish"| dataswitch
+  web -->|"GET /did.json"| did[("issuer did.json<br/>VC_DID_HOST")]
+  dataswitch -->|GATEWAY_URL| gateway[("Ecosystems Gateway<br/>Pontus-X")]
+```
+
 ## Setup
 
 You need Docker (with Compose). Node is only needed for `make fmt`.
@@ -26,7 +47,7 @@ Any change to `.env` or to `policy/` needs the recreate command again; changes i
 
 ### Publishing on Pontus-X
 
-After a passing check, **Publish** sends the DPP and its compliance credential to the publishing stack, which publishes the DPP as a Pontus-X offering with a Gaia-X service offering of the provider. It needs the stack running (`docker compose --profile publish up --build`) and its settings in `.env`; see [publish/README.md](publish/README.md).
+After a passing check, **Publish** sends the DPP and its compliance credential to the publishing stack, which publishes the DPP as a Pontus-X offering with a Gaia-X service offering of the provider. It needs its settings in `.env` and the signer key in `publish/signer/key.pem`; see [publish/README.md](publish/README.md).
 
 ### Development
 
