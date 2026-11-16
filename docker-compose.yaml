@@ -54,6 +54,7 @@ services:
     depends_on: [signer]
   signer:
     image: registry.dumss.net/theia/gaia-x-signer:v0.3.2
+    platform: linux/amd64
     read_only: true
     cap_drop: [ALL]
     security_opt: ["no-new-privileges:true"]
