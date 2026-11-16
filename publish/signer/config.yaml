@@ -1,5 +1,5 @@
-# gaia-x-signer config (copy to publish/signer/config.yaml, put the signing key next to it as
-# key.pem). All options: https://git.dumss.net/theia/gaia-x-signer/-/blob/main/config.yaml
+# gaia-x-signer config; the signing key goes next to it as key.pem (gitignored).
+# All options: https://git.dumss.net/theia/gaia-x-signer/-/blob/main/config.yaml
 sdbs:
   uid: https://signer.sdbs.dumss.net/v1
   withHealthServer: true

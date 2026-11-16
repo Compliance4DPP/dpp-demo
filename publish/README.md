@@ -129,11 +129,21 @@ passes each variable to the container that reads it.
 | `TEMPLATE_*`              | values for the templates (see `.env.example`); a new one needs a line in `docker-compose.yaml` |
 | `PUBLISH_TIMEOUT`, `MAX_REQUEST_BYTES`, `HTTP_ADDR` | default `10m`, 16 MiB, `:8080` |
 
+## Setup
+
+1. **`.env`** (`cp .env.example .env`): set `GATEWAY_TOKEN`, `ISSUER_DID`, `ISSUER_KEY_ID` and
+   `SIGNER_AUTHORIZATION` (must match `basicAuths` in `signer/config.yaml`).
+2. **`signer/key.pem`**: private key of `ISSUER_KEY_ID` (gitignored, never commit it).
+3. **[`signer/config.yaml`](signer/config.yaml)**: set `signatureAlgorithm` to match the key
+   (`ES256` for EC, `RS256` for RSA); change `demo:test` in `basicAuths` outside a local demo.
+4. **Hosted files**: PTW's defaults are already up. For your own provider, host the participant
+   credential, `templates/default/images/` and `samples/tool_dpp.json` at their `TEMPLATE_*`/
+   `PROVIDER_CREDENTIAL_URL`, and after the first publish, the returned `presentation` at
+   `presentation_url`.
+
 ## Run
 
 ```bash
-cp .env.example .env   # if not done yet; set GATEWAY_TOKEN, ISSUER_DID and the terms
-cp publish/signer/config.example.yaml publish/signer/config.yaml  # signing key as publish/signer/key.pem
 docker compose --profile publish up --build
 ```
 
