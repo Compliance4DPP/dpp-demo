@@ -52,7 +52,7 @@ submodels that any AAS-capable system can read.
 ## Compliance credential
 
 {{with index .Doc "credentialSubject"}}{{md (printf "%v" (index . "gx:rulesVersion"))}}, {{len (index . "gx:validatedCriteria")}} criteria passed.{{end}}
-{{- if .JWT}} Signed by `{{index .Doc "issuer"}}`, valid until {{md (printf "%.10s" (index .Doc "validUntil"))}}:
+{{- if .JWT}} Signed by `{{index .Doc "issuer"}}`, valid until {{md (printf "%.10s" (index .Doc "validUntil"))}}. You can inspect it at [VC JWT Decoder](https://vc-jwt.io/playground?tab=decoder):
 
 ```
 {{.JWT}}
