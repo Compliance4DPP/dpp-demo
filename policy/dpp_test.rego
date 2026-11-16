@@ -1,8 +1,12 @@
+# Unit tests for dpp.rego / vc.rego (run: opa test policy/).
+# Each test starts from `base`, a minimal valid AAS environment, and changes one thing
+# (via `with input as ...` or a json.patch helper) to check that exactly that problem is caught.
 package dpp_test
 
 import data.dpp
 import rego.v1
 
+# minimal input that passes every IDTA check
 base := {
 	"assetAdministrationShells": [{
 		"id": "aas-1",
@@ -26,6 +30,8 @@ base := {
 	}],
 }
 
+# builders for AAS JSON fragments: semanticId reference, Property element, supplementalSemanticId,
+# contentSpecificationIds list and its items
 sem(name) := {"type": "ExternalReference", "keys": [{"type": "GlobalReference", "value": concat("", ["https://admin-shell.io/idta/cds/", name, "/1"])}]}
 
 prop(id, vt, v) := {"idShort": id, "semanticId": sem(id), "modelType": "Property", "valueType": vt, "value": v}
@@ -44,6 +50,7 @@ csi(items) := {
 
 item(v) := {"semanticId": sem("contentSpecificationId"), "modelType": "Property", "valueType": "xs:string", "value": v}
 
+# base with a contentSpecificationIds list appended / with lastUpdate (element index 5) replaced
 with_csi(items) := json.patch(base, [{"op": "add", "path": "/submodels/0/submodelElements/-", "value": csi(items)}])
 
 with_update(v) := json.patch(base, [{"op": "replace", "path": "/submodels/0/submodelElements/5/value", "value": v}])
