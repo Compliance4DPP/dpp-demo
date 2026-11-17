@@ -526,7 +526,7 @@ func TestOfferingSize(t *testing.T) {
 			"gx:engineVersion":        "1.22.0",
 			"gx:rulesVersion":         "IDTA-02099-1 v1.0",
 			"gx:validatedCriteria":    criteria,
-			"gx:compliantCredentials": []any{map[string]any{"id": "https://compliance4dpp.eu//ids/sm/5171_0101_1162_5088", "gx:credentialType": "DppMetadata", "digestSRI": "sha256-" + strings.Repeat("a", 64)}},
+			"gx:compliantCredentials": []any{map[string]any{"id": "https://compliance4dpp.eu/ids/sm/5171_0101_1162_5088", "gx:credentialType": "DppMetadata", "digestSRI": "sha256-" + strings.Repeat("a", 64)}},
 		},
 	})
 	jb, _ := json.Marshal(compliance)

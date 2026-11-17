@@ -8,10 +8,10 @@
           "text": "Digital Product Passport for an individual milling cutter. Example instance structure; product-specific values are to be populated."
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/aas/1181_0101_1162_4020",
+      "id": "https://compliance4dpp.eu/ids/aas/1181_0101_1162_4020",
       "assetInformation": {
         "assetKind": "Instance",
-        "globalAssetId": "https://compliance4dpp.eu//ids/asset/4081_0101_1162_5230"
+        "globalAssetId": "https://compliance4dpp.eu/ids/asset/4081_0101_1162_5230"
       },
       "submodels": [
         {
@@ -19,7 +19,7 @@
           "keys": [
             {
               "type": "Submodel",
-              "value": "https://compliance4dpp.eu//ids/sm/5171_0101_1162_5088"
+              "value": "https://compliance4dpp.eu/ids/sm/5171_0101_1162_5088"
             }
           ]
         },
@@ -28,7 +28,7 @@
           "keys": [
             {
               "type": "Submodel",
-              "value": "https://compliance4dpp.eu//ids/sm/3561_0101_1162_7731"
+              "value": "https://compliance4dpp.eu/ids/sm/3561_0101_1162_7731"
             }
           ]
         },
@@ -37,7 +37,7 @@
           "keys": [
             {
               "type": "Submodel",
-              "value": "https://compliance4dpp.eu//ids/sm/5361_0101_1162_6288"
+              "value": "https://compliance4dpp.eu/ids/sm/5361_0101_1162_6288"
             }
           ]
         },
@@ -46,7 +46,7 @@
           "keys": [
             {
               "type": "Submodel",
-              "value": "https://compliance4dpp.eu//ids/sm/8161_0101_1162_6981"
+              "value": "https://compliance4dpp.eu/ids/sm/8161_0101_1162_6981"
             }
           ]
         },
@@ -55,7 +55,7 @@
           "keys": [
             {
               "type": "Submodel",
-              "value": "https://compliance4dpp.eu//ids/sm/6451_0101_1162_5983"
+              "value": "https://compliance4dpp.eu/ids/sm/6451_0101_1162_5983"
             }
           ]
         },
@@ -64,7 +64,7 @@
           "keys": [
             {
               "type": "Submodel",
-              "value": "https://compliance4dpp.eu//ids/sm/6251_0101_1162_7608"
+              "value": "https://compliance4dpp.eu/ids/sm/6251_0101_1162_7608"
             }
           ]
         },
@@ -73,7 +73,7 @@
           "keys": [
             {
               "type": "Submodel",
-              "value": "https://compliance4dpp.eu//ids/sm/9541_0101_1162_8381"
+              "value": "https://compliance4dpp.eu/ids/sm/9541_0101_1162_8381"
             }
           ]
         },
@@ -82,7 +82,7 @@
           "keys": [
             {
               "type": "Submodel",
-              "value": "https://compliance4dpp.eu//ids/sm/1221_0101_1162_4070"
+              "value": "https://compliance4dpp.eu/ids/sm/1221_0101_1162_4070"
             }
           ]
         }
@@ -99,7 +99,7 @@
           "text": "\n   Digital record of product characteristics throughout its life cycle.\n   \n   SOURCE: FprEN 18223:2026(en)   \n   "
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/sm/5171_0101_1162_5088",
+      "id": "https://compliance4dpp.eu/ids/sm/5171_0101_1162_5088",
       "kind": "Instance",
       "semanticId": {
         "type": "ModelReference",
@@ -197,7 +197,7 @@
           ],
           "valueType": "xs:string",
           "modelType": "Property",
-          "value": "https://compliance4dpp.eu//ids/asset/4081_0101_1162_5230"
+          "value": "https://compliance4dpp.eu/ids/asset/4081_0101_1162_5230"
         },
         {
           "idShort": "granularity",
@@ -812,7 +812,7 @@
           "text": "The Submodel provides the means to access the Carbon Footprint of the asset."
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/sm/3561_0101_1162_7731",
+      "id": "https://compliance4dpp.eu/ids/sm/3561_0101_1162_7731",
       "kind": "Instance",
       "semanticId": {
         "type": "ExternalReference",
@@ -1941,7 +1941,7 @@
           "text": "Contains the nameplate information attached to the product"
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/sm/5361_0101_1162_6288",
+      "id": "https://compliance4dpp.eu/ids/sm/5361_0101_1162_6288",
       "kind": "Instance",
       "semanticId": {
         "type": "ExternalReference",
@@ -3528,7 +3528,7 @@
           "text": "The Submodel defines a set meta data for the handover of documentation from the manufacturer to the operator for industrial equipment"
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/sm/8161_0101_1162_6981",
+      "id": "https://compliance4dpp.eu/ids/sm/8161_0101_1162_6981",
       "kind": "Instance",
       "semanticId": {
         "type": "ModelReference",
@@ -5791,7 +5791,7 @@
           "text": "Teilmodell, das die technischen Daten des Assets und die zugehörigen Produktklassifizierungen enthält"
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/sm/6451_0101_1162_5983",
+      "id": "https://compliance4dpp.eu/ids/sm/6451_0101_1162_5983",
       "kind": "Instance",
       "semanticId": {
         "type": "ExternalReference",
@@ -8509,7 +8509,7 @@
           "text": "Minimal material information relevant to the milling cutter DPP."
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/sm/6251_0101_1162_7608",
+      "id": "https://compliance4dpp.eu/ids/sm/6251_0101_1162_7608",
       "kind": "Instance",
       "semanticId": {
         "type": "ExternalReference",
@@ -8646,7 +8646,7 @@
           "text": "Minimal condition information for monitoring the individual milling cutter during use."
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/sm/9541_0101_1162_8381",
+      "id": "https://compliance4dpp.eu/ids/sm/9541_0101_1162_8381",
       "kind": "Instance",
       "semanticId": {
         "type": "ExternalReference",
@@ -9460,7 +9460,7 @@
           "text": "Minimal circularity information covering reconditioning, reuse and end-of-life."
         }
       ],
-      "id": "https://compliance4dpp.eu//ids/sm/1221_0101_1162_4070",
+      "id": "https://compliance4dpp.eu/ids/sm/1221_0101_1162_4070",
       "kind": "Instance",
       "semanticId": {
         "type": "ExternalReference",
